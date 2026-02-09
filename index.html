@@ -175,7 +175,9 @@
     list.innerHTML = '';
 
     const sel = document.getElementById('payPerson');
-    sel.innerHTML = '';
+
+    // SEÇİMİ KORUMAK İÇİN: seçili kişiyi hatırla (DEĞİŞİKLİK SADECE BURADA)
+    const selected = sel.value;
 
     data.people.forEach(p => {
       const div = document.createElement('div');
@@ -183,12 +185,20 @@
       div.innerHTML = `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash Ödeme: ${fmtMoney(p.cash_paid_total)}</div></div>
                        <div class="badge">${fmtMoney(p.cash_due)}</div>`;
       list.appendChild(div);
-
-      const opt = document.createElement('option');
-      opt.value = p.person;
-      opt.textContent = p.person;
-      sel.appendChild(opt);
     });
+
+    // Dropdown'u sadece ilk sefer doldur, sonra seçim bozulmasın (DEĞİŞİKLİK SADECE BURADA)
+    if (sel.options.length === 0) {
+      data.people.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.person;
+        opt.textContent = p.person;
+        sel.appendChild(opt);
+      });
+    } else {
+      const exists = Array.from(sel.options).some(o => o.value === selected);
+      if (exists) sel.value = selected;
+    }
 
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
