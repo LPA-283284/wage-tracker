@@ -104,8 +104,8 @@
   const tokenMsg = document.getElementById('tokenMsg');
 
   function fmtMoney(n) {
-    const x = Number(n || 0);
-    return x.toLocaleString('tr-TR') + ' ₺';
+  const x = Number(n || 0);
+  return "£" + x.toLocaleString('en-GB');
   }
 
   function jsonp(action, params = {}) {
