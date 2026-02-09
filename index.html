@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8" />
+  <title>Wage Tracker</title>
+  <style>
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; margin: 12px; }
+    .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .card { border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
+    .row:last-child { border-bottom:none; }
+    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; }
+    button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
+    button.primary { background:#111; color:#fff; border-color:#111; }
+    input, select { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
+    .muted { color:#666; font-size:12px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div style="font-size:18px;font-weight:900;">Wage Tracker</div>
+      <div class="muted" id="meLine">Saruhan, token girince çalışır.</div>
+    </div>
+    <div><button id="btnRefresh" class="primary">Yenile</button></div>
+  </div>
+
+  <div class="card">
+    <div class="muted">Token</div>
+    <input id="tokenInput" placeholder="token..." />
+    <div class="muted" style="margin-top:6px;">Link ile de verebilirsin: <b>?token=...</b></div>
+    <div style="margin-top:10px;"><button id="btnSaveToken" class="primary">Token Kaydet</button></div>
+    <div class="muted" id="tokenMsg" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card" id="summaryCard" class="hidden">
+    <div style="font-weight:900;margin-bottom:8px;">Toplamlar</div>
+    <div class="grid">
+      <div><div class="muted">Toplam WAGE</div><div style="font-size:18px;font-weight:900;" id="tWage">—</div></div>
+      <div><div class="muted">Toplam Cash Ödeme</div><div style="font-size:18px;font-weight:900;" id="tCashPaid">—</div></div>
+      <div><div class="muted">Toplam Cash Kalan</div><div style="font-size:18px;font-weight:900;" id="tCashDue">—</div></div>
+      <div><div class="muted">Toplam Banka Ödeme</div><div style="font-size:18px;font-weight:900;" id="tBankPaid">—</div></div>
+    </div>
+    <div class="muted" id="lastUpdated" style="margin-top:8px;">—</div>
+  </div>
+
+  <div class="card hidden" id="peopleCard">
+    <div style="font-weight:900;margin-bottom:8px;">Personel Durumu</div>
+    <div id="peopleList"></div>
+  </div>
+
+  <div class="card hidden" id="payCard">
+    <div style="font-weight:900;margin-bottom:8px;">Ödeme Ekle (Cash)</div>
+    <div class="grid">
+      <div><div class="muted">Kişi</div><select id="payPerson"></select></div>
+      <div><div class="muted">Tutar</div><input id="payAmount" inputmode="decimal" placeholder="200" /></div>
+    </div>
+    <div style="margin-top:10px;"><div class="muted">Ödeyen</div><input id="payBy" placeholder="Saruhan / Arkadaş" /></div>
+    <div style="margin-top:10px;"><div class="muted">Not</div><input id="payNote" placeholder="Nakit ödeme" /></div>
+    <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Ödeme Ekle</button></div>
+    <div class="muted" id="payMsg" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card hidden" id="adminCard">
+    <div style="font-weight:900;margin-bottom:8px;">Admin</div>
+
+    <div style="font-weight:800;margin:10px 0 6px;">WAGE Ekle</div>
+    <div class="grid">
+      <div><div class="muted">Kişi</div><input id="wagePerson" placeholder="Ahmet" /></div>
+      <div><div class="muted">Tutar</div><input id="wageAmount" inputmode="decimal" placeholder="500" /></div>
+    </div>
+    <div style="margin-top:10px;"><div class="muted">Not</div><input id="wageNote" placeholder="Cash alacağı" /></div>
+    <div style="margin-top:12px;"><button id="btnAddWage" class="primary">WAGE Ekle</button></div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0;"/>
+
+    <div style="font-weight:800;margin:10px 0 6px;">Kullanıcı Ekle</div>
+    <div class="grid">
+      <div><div class="muted">İsim</div><input id="newUserName" placeholder="Ali" /></div>
+      <div>
+        <div class="muted">Rol</div>
+        <select id="newUserRole">
+          <option>VIEWER</option>
+          <option>PAYER</option>
+          <option>EDITOR</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;"><button id="btnAddUser" class="primary">Kullanıcı Oluştur</button></div>
+    <div class="muted" id="adminMsg" style="margin-top:8px;"></div>
+  </div>
+
+<script>
+  // Saruhan: buraya kendi Apps Script /exec URL'ini yaz
+  const API_URL = "https://script.google.com/macros/s/AKfycbxGeNg1HFo3oduViM4mzOSFaXV0BNp3L7BLx5Siz1fkT-vRXS27zwbY4i2MrNARx8oj/exec";
+
+  const qs = new URLSearchParams(location.search);
+  const tokenFromUrl = qs.get('token');
+
+  const tokenInput = document.getElementById('tokenInput');
+  const tokenMsg = document.getElementById('tokenMsg');
+
+  function fmtMoney(n) {
+    const x = Number(n || 0);
+    return x.toLocaleString('tr-TR') + ' ₺';
+  }
+
+  function jsonp(action, params = {}) {
+    return new Promise((resolve, reject) => {
+      const cbName = "__cb_" + Math.random().toString(36).slice(2);
+      const u = new URL(API_URL);
+      u.searchParams.set("action", action);
+      u.searchParams.set("callback", cbName);
+      Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, v));
+
+      const script = document.createElement("script");
+      window[cbName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error("JSONP yüklenemedi"));
+      };
+
+      function cleanup() {
+        delete window[cbName];
+        script.remove();
+      }
+
+      script.src = u.toString();
+      document.body.appendChild(script);
+    });
+  }
+
+  function getToken() {
+    return tokenInput.value.trim();
+  }
+
+  function showApp(yes) {
+    document.getElementById('summaryCard').classList.toggle('hidden', !yes);
+    document.getElementById('peopleCard').classList.toggle('hidden', !yes);
+    document.getElementById('payCard').classList.toggle('hidden', !yes);
+  }
+
+  async function refresh() {
+    const token = getToken();
+    if (!token) return;
+
+    const data = await jsonp("summary", { token });
+    if (!data.ok) {
+      tokenMsg.textContent = "Hata: " + (data.error || "");
+      showApp(false);
+      return;
+    }
+
+    tokenMsg.textContent = "";
+    showApp(true);
+
+    document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
+    document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
+    document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
+    document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_cash_due);
+    document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
+    document.getElementById('lastUpdated').textContent = 'Son güncelleme: ' + new Date().toLocaleString('tr-TR');
+
+    const list = document.getElementById('peopleList');
+    list.innerHTML = '';
+
+    const sel = document.getElementById('payPerson');
+    sel.innerHTML = '';
+
+    data.people.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'row';
+      div.innerHTML = `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash Ödeme: ${fmtMoney(p.cash_paid_total)}</div></div>
+                       <div class="badge">${fmtMoney(p.cash_due)}</div>`;
+      list.appendChild(div);
+
+      const opt = document.createElement('option');
+      opt.value = p.person;
+      opt.textContent = p.person;
+      sel.appendChild(opt);
+    });
+
+    const payBy = document.getElementById('payBy');
+    if (!payBy.value) payBy.value = data.me.name;
+
+    document.getElementById('adminCard').classList.toggle('hidden', data.me.role !== 'ADMIN');
+  }
+
+  document.getElementById('btnSaveToken').onclick = async () => {
+    const t = tokenInput.value.trim();
+    if (!t) { tokenMsg.textContent = "Token boş olamaz."; return; }
+    localStorage.setItem("wage_token", t);
+    tokenMsg.textContent = "Kaydedildi. Yenileniyor...";
+    await refresh();
+  };
+
+  document.getElementById('btnRefresh').onclick = refresh;
+
+  document.getElementById('btnAddPayment').onclick = async () => {
+    const token = getToken();
+    const person = document.getElementById('payPerson').value;
+    const amount = document.getElementById('payAmount').value;
+    const paid_by = document.getElementById('payBy').value;
+    const note = document.getElementById('payNote').value;
+
+    const msg = document.getElementById('payMsg');
+    msg.textContent = "Gönderiliyor...";
+    const res = await jsonp("add_payment", { token, person, amount, paid_by, note });
+    if (!res.ok) { msg.textContent = "Hata: " + (res.error || ""); return; }
+    msg.textContent = "Eklendi ✅";
+    document.getElementById('payAmount').value = '';
+    document.getElementById('payNote').value = '';
+    await refresh();
+  };
+
+  document.getElementById('btnAddWage').onclick = async () => {
+    const token = getToken();
+    const person = document.getElementById('wagePerson').value;
+    const amount = document.getElementById('wageAmount').value;
+    const note = document.getElementById('wageNote').value;
+
+    const msg = document.getElementById('adminMsg');
+    msg.textContent = "Gönderiliyor...";
+    const res = await jsonp("add_wage", { token, person, amount, note });
+    if (!res.ok) { msg.textContent = "Hata: " + (res.error || ""); return; }
+    msg.textContent = "WAGE eklendi ✅";
+    document.getElementById('wageAmount').value = '';
+    document.getElementById('wageNote').value = '';
+    await refresh();
+  };
+
+  document.getElementById('btnAddUser').onclick = async () => {
+    const token = getToken();
+    const name = document.getElementById('newUserName').value;
+    const role = document.getElementById('newUserRole').value;
+
+    const msg = document.getElementById('adminMsg');
+    msg.textContent = "Oluşturuluyor...";
+    const res = await jsonp("add_user", { token, name, role });
+    if (!res.ok) { msg.textContent = "Hata: " + (res.error || ""); return; }
+
+    // GitHub Pages URL'nin sonuna token ekleyerek paylaşabilirsin
+    const base = location.origin + location.pathname;
+    const link = base + '?token=' + encodeURIComponent(res.user.token);
+    msg.textContent = `Kullanıcı: ${res.user.name} (${res.user.role}) ✅  Link: ${link}`;
+    document.getElementById('newUserName').value = '';
+  };
+
+  // init token
+  const saved = localStorage.getItem("wage_token");
+  if (tokenFromUrl) tokenInput.value = tokenFromUrl;
+  else if (saved) tokenInput.value = saved;
+
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
