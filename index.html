@@ -105,7 +105,10 @@
 
   function fmtMoney(n) {
   const x = Number(n || 0);
-  return "£" + x.toLocaleString('en-GB');
+  return x.toLocaleString('en-GB', {
+    style: 'currency',
+    currency: 'GBP'
+  });
   }
 
   function jsonp(action, params = {}) {
