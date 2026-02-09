@@ -21,6 +21,16 @@
 </head>
 <body>
   <div class="top">
+    <div class="card" style="display:flex; gap:10px;">
+  <button id="tabStatus" class="primary" style="flex:1;">Status</button>
+  <button id="tabPayments" style="flex:1;">Payments</button>
+</div>
+
+<div class="card hidden" id="paymentsCard">
+  <div style="font-weight:900;margin-bottom:8px;">Payments</div>
+  <div id="paymentsList"></div>
+</div>
+
     <div>
       <div style="font-size:18px;font-weight:900;">Wage Tracker</div>
       <div class="muted" id="meLine">Saruhan, token girince çalışır.</div>
