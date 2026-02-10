@@ -184,7 +184,7 @@
     const sel = document.getElementById('payPerson');
     const selected = sel.value;
 
-    // 0 bakiyesi olanlar en alta, kalanlar cash_due en yüksekten en düşüğe (DEĞİŞİKLİK SADECE BURADA)
+    // 0 bakiyesi olanlar en alta, kalanlar cash_due en yüksekten en düşüğe
     const peopleSorted = [...data.people].sort((a, b) => {
       const aDue = Number(a.cash_due || 0);
       const bDue = Number(b.cash_due || 0);
@@ -218,16 +218,15 @@
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
 
-    document.getElementById('adminCard').classList.toggle('hidden', data.me.role !== 'ADMIN');
-    // Rol bazlı görünürlük
-const role = data.me.role;
+    // ROL BAZLI GÖRÜNÜRLÜK (SADECE BU EKLENDİ)
+    const role = data.me.role;
 
-// Admin panel sadece ADMIN görür
-document.getElementById('adminCard').classList.toggle('hidden', role !== 'ADMIN');
+    // Admin panel sadece ADMIN görür
+    document.getElementById('adminCard').classList.toggle('hidden', role !== 'ADMIN');
 
-// Ödeme ekleme sadece ADMIN / PAYER / EDITOR görür
-const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
-document.getElementById('payCard').classList.toggle('hidden', !canPay);
+    // Ödeme ekleme sadece ADMIN / PAYER / EDITOR görür
+    const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
+    document.getElementById('payCard').classList.toggle('hidden', !canPay);
   }
 
   async function refreshPayments() {
