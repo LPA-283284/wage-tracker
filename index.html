@@ -77,15 +77,7 @@
   <div class="card hidden" id="adminCard">
     <div style="font-weight:900;margin-bottom:8px;">Admin</div>
 
-    <div style="font-weight:800;margin:10px 0 6px;">WAGE Ekle</div>
-    <div class="grid">
-      <div><div class="muted">Kişi</div><input id="wagePerson" placeholder="Ahmet" /></div>
-      <div><div class="muted">Tutar</div><input id="wageAmount" inputmode="decimal" placeholder="500" /></div>
-    </div>
-    <div style="margin-top:10px;"><div class="muted">Not</div><input id="wageNote" placeholder="Cash alacağı" /></div>
-    <div style="margin-top:12px;"><button id="btnAddWage" class="primary">WAGE Ekle</button></div>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:16px 0;"/>
+    <!-- WAGE Ekle bölümü Saruhan isteğiyle kaldırıldı -->
 
     <div style="font-weight:800;margin:10px 0 6px;">Kullanıcı Ekle</div>
     <div class="grid">
@@ -272,22 +264,6 @@
     msg.textContent = "Eklendi ✅";
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
-    await refresh();
-  };
-
-  document.getElementById('btnAddWage').onclick = async () => {
-    const token = getToken();
-    const person = document.getElementById('wagePerson').value;
-    const amount = document.getElementById('wageAmount').value;
-    const note = document.getElementById('wageNote').value;
-
-    const msg = document.getElementById('adminMsg');
-    msg.textContent = "Gönderiliyor...";
-    const res = await jsonp("add_wage", { token, person, amount, note });
-    if (!res.ok) { msg.textContent = "Hata: " + (res.error || ""); return; }
-    msg.textContent = "WAGE eklendi ✅";
-    document.getElementById('wageAmount').value = '';
-    document.getElementById('wageNote').value = '';
     await refresh();
   };
 
