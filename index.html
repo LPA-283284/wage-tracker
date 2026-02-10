@@ -161,7 +161,11 @@
 
   async function refresh() {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      tokenMsg.textContent = "Token girmen gerekiyor.";
+      tokenInput.focus();
+      return;
+    }
 
     const data = await jsonp("summary", { token });
     if (!data.ok) {
@@ -212,7 +216,11 @@
 
   async function refreshPayments() {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      tokenMsg.textContent = "Token girmen gerekiyor.";
+      tokenInput.focus();
+      return;
+    }
 
     const data = await jsonp("payments", { token });
     if (!data.ok) return;
