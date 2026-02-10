@@ -219,6 +219,15 @@
     if (!payBy.value) payBy.value = data.me.name;
 
     document.getElementById('adminCard').classList.toggle('hidden', data.me.role !== 'ADMIN');
+    // Rol bazlı görünürlük
+const role = data.me.role;
+
+// Admin panel sadece ADMIN görür
+document.getElementById('adminCard').classList.toggle('hidden', role !== 'ADMIN');
+
+// Ödeme ekleme sadece ADMIN / PAYER / EDITOR görür
+const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
+document.getElementById('payCard').classList.toggle('hidden', !canPay);
   }
 
   async function refreshPayments() {
