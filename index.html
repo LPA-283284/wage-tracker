@@ -21,16 +21,6 @@
 </head>
 <body>
   <div class="top">
-    <div class="card" style="display:flex; gap:10px;">
-  <button id="tabStatus" class="primary" style="flex:1;">Status</button>
-  <button id="tabPayments" style="flex:1;">Payments</button>
-</div>
-
-<div class="card hidden" id="paymentsCard">
-  <div style="font-weight:900;margin-bottom:8px;">Payments</div>
-  <div id="paymentsList"></div>
-</div>
-
     <div>
       <div style="font-size:18px;font-weight:900;">Wage Tracker</div>
       <div class="muted" id="meLine">Saruhan, token girince çalışır.</div>
@@ -46,7 +36,12 @@
     <div class="muted" id="tokenMsg" style="margin-top:8px;"></div>
   </div>
 
-  <div class="card" id="summaryCard" class="hidden">
+  <div class="card" style="display:flex; gap:10px;">
+    <button id="tabStatus" class="primary" style="flex:1;">Durum</button>
+    <button id="tabPayments" style="flex:1;">Ödemeler</button>
+  </div>
+
+  <div class="card hidden" id="summaryCard">
     <div style="font-weight:900;margin-bottom:8px;">Toplamlar</div>
     <div class="grid">
       <div><div class="muted">Toplam WAGE</div><div style="font-size:18px;font-weight:900;" id="tWage">—</div></div>
@@ -72,6 +67,11 @@
     <div style="margin-top:10px;"><div class="muted">Not</div><input id="payNote" placeholder="Nakit ödeme" /></div>
     <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Ödeme Ekle</button></div>
     <div class="muted" id="payMsg" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card hidden" id="paymentsCard">
+    <div style="font-weight:900;margin-bottom:8px;">Cash Ödemeler</div>
+    <div id="paymentsList"></div>
   </div>
 
   <div class="card hidden" id="adminCard">
@@ -114,11 +114,8 @@
   const tokenMsg = document.getElementById('tokenMsg');
 
   function fmtMoney(n) {
-  const x = Number(n || 0);
-  return x.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP'
-  });
+    const x = Number(n || 0);
+    return x.toLocaleString('en-GB', { style: 'currency', currency: 'GBP' });
   }
 
   function jsonp(action, params = {}) {
@@ -154,10 +151,19 @@
     return tokenInput.value.trim();
   }
 
-  function showApp(yes) {
-    document.getElementById('summaryCard').classList.toggle('hidden', !yes);
-    document.getElementById('peopleCard').classList.toggle('hidden', !yes);
-    document.getElementById('payCard').classList.toggle('hidden', !yes);
+  let currentView = 'status'; // 'status' | 'payments'
+
+  function setView(view) {
+    currentView = view;
+
+    document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
+
+    document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
+    document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
+    document.getElementById('payCard').classList.toggle('hidden', view !== 'status');
+
+    document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
+    document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
   }
 
   async function refresh() {
@@ -167,12 +173,10 @@
     const data = await jsonp("summary", { token });
     if (!data.ok) {
       tokenMsg.textContent = "Hata: " + (data.error || "");
-      showApp(false);
       return;
     }
 
     tokenMsg.textContent = "";
-    showApp(true);
 
     document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
     document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
@@ -185,8 +189,6 @@
     list.innerHTML = '';
 
     const sel = document.getElementById('payPerson');
-
-    // SEÇİMİ KORUMAK İÇİN: seçili kişiyi hatırla (DEĞİŞİKLİK SADECE BURADA)
     const selected = sel.value;
 
     data.people.forEach(p => {
@@ -197,7 +199,6 @@
       list.appendChild(div);
     });
 
-    // Dropdown'u sadece ilk sefer doldur, sonra seçim bozulmasın (DEĞİŞİKLİK SADECE BURADA)
     if (sel.options.length === 0) {
       data.people.forEach(p => {
         const opt = document.createElement('option');
@@ -216,6 +217,34 @@
     document.getElementById('adminCard').classList.toggle('hidden', data.me.role !== 'ADMIN');
   }
 
+  async function refreshPayments() {
+    const token = getToken();
+    if (!token) return;
+
+    const data = await jsonp("payments", { token });
+    if (!data.ok) return;
+
+    const box = document.getElementById('paymentsList');
+    box.innerHTML = '';
+
+    data.payments.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'row';
+      div.innerHTML = `
+        <div>
+          <b>${p.person}</b>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''}</div>
+          <div class="muted">${p.note || ''}</div>
+        </div>
+        <div class="badge">${fmtMoney(p.amount)}</div>
+      `;
+      box.appendChild(div);
+    });
+  }
+
+  document.getElementById('tabStatus').onclick = () => setView('status');
+  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); };
+
   document.getElementById('btnSaveToken').onclick = async () => {
     const t = tokenInput.value.trim();
     if (!t) { tokenMsg.textContent = "Token boş olamaz."; return; }
@@ -224,7 +253,10 @@
     await refresh();
   };
 
-  document.getElementById('btnRefresh').onclick = refresh;
+  document.getElementById('btnRefresh').onclick = async () => {
+    if (currentView === 'payments') await refreshPayments();
+    else await refresh();
+  };
 
   document.getElementById('btnAddPayment').onclick = async () => {
     const token = getToken();
@@ -269,20 +301,23 @@
     const res = await jsonp("add_user", { token, name, role });
     if (!res.ok) { msg.textContent = "Hata: " + (res.error || ""); return; }
 
-    // GitHub Pages URL'nin sonuna token ekleyerek paylaşabilirsin
     const base = location.origin + location.pathname;
     const link = base + '?token=' + encodeURIComponent(res.user.token);
     msg.textContent = `Kullanıcı: ${res.user.name} (${res.user.role}) ✅  Link: ${link}`;
     document.getElementById('newUserName').value = '';
   };
 
-  // init token
   const saved = localStorage.getItem("wage_token");
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
+  setView('status');
   refresh();
-  setInterval(refresh, 3000);
+
+  setInterval(() => {
+    if (currentView === 'payments') refreshPayments();
+    else refresh();
+  }, 3000);
 </script>
 </body>
 </html>
