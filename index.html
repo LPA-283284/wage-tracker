@@ -50,44 +50,34 @@
   </div>
 
   <div class="card hidden" id="payCard">
-    <div style="font-weight:900;margin-bottom:8px;">Add Payment (Cash)</div>
+    <div style="font-weight:900;margin-bottom:8px;">Add Payment</div>
+
     <div class="grid">
       <div><div class="muted">Person</div><select id="payPerson"></select></div>
       <div><div class="muted">Amount</div><input id="payAmount" inputmode="decimal" placeholder="200" /></div>
     </div>
+
+    <!-- ✅ Payment Method Added -->
+    <div style="margin-top:10px;">
+      <div class="muted">Payment Method</div>
+      <select id="payMethod">
+        <option value="CASH">Cash</option>
+        <option value="BANK">Bank Transfer</option>
+      </select>
+    </div>
+
     <div style="margin-top:10px;"><div class="muted">Paid By</div><input id="payBy" placeholder="Saruhan / Friend" /></div>
-    <div style="margin-top:10px;"><div class="muted">Note</div><input id="payNote" placeholder="Cash payment" /></div>
+    <div style="margin-top:10px;"><div class="muted">Note</div><input id="payNote" placeholder="Payment note" /></div>
     <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Add Payment</button></div>
     <div class="muted" id="payMsg" style="margin-top:8px;"></div>
   </div>
 
   <div class="card hidden" id="paymentsCard">
-    <div style="font-weight:900;margin-bottom:8px;">Cash Payments</div>
+    <div style="font-weight:900;margin-bottom:8px;">Payments History</div>
     <div id="paymentsList"></div>
   </div>
 
-  <div class="card hidden" id="adminCard">
-    <div style="font-weight:900;margin-bottom:8px;">Admin</div>
-
-    <!-- WAGE Add section removed by Saruhan request -->
-
-    <div style="font-weight:800;margin:10px 0 6px;">Add User</div>
-    <div class="grid">
-      <div><div class="muted">Name</div><input id="newUserName" placeholder="Ali" /></div>
-      <div>
-        <div class="muted">Role</div>
-        <select id="newUserRole">
-          <option>VIEWER</option>
-          <option>PAYER</option>
-          <option>EDITOR</option>
-        </select>
-      </div>
-    </div>
-    <div style="margin-top:12px;"><button id="btnAddUser" class="primary">Create User</button></div>
-    <div class="muted" id="adminMsg" style="margin-top:8px;"></div>
-  </div>
-
-  <!-- Token card moved to bottom by Saruhan request -->
+  <!-- Token -->
   <div class="card">
     <div class="muted">Token</div>
     <input id="tokenInput" placeholder="token..." />
@@ -97,7 +87,6 @@
   </div>
 
 <script>
-  // Saruhan: put your Apps Script /exec URL here
   const API_URL = "https://script.google.com/macros/s/AKfycbxGeNg1HFo3oduViM4mzOSFaXV0BNp3L7BLx5Siz1fkT-vRXS27zwbY4i2MrNARx8oj/exec";
 
   const qs = new URLSearchParams(location.search);
@@ -127,7 +116,7 @@
 
       script.onerror = () => {
         cleanup();
-        reject(new Error("JSONP failed to load"));
+        reject(new Error("JSONP failed"));
       };
 
       function cleanup() {
@@ -142,91 +131,6 @@
 
   function getToken() {
     return tokenInput.value.trim();
-  }
-
-  let currentView = 'status'; // 'status' | 'payments'
-
-  function setView(view) {
-    currentView = view;
-
-    document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
-
-    document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
-    document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
-    document.getElementById('payCard').classList.toggle('hidden', view !== 'status');
-
-    document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
-    document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
-  }
-
-  async function refresh() {
-    const token = getToken();
-    if (!token) return;
-
-    const data = await jsonp("summary", { token });
-    if (!data.ok) {
-      tokenMsg.textContent = "Error: " + (data.error || "");
-      return;
-    }
-
-    tokenMsg.textContent = "";
-
-    document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
-    document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
-    document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
-    document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_cash_due);
-    document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
-    document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString('en-GB');
-
-    const list = document.getElementById('peopleList');
-    list.innerHTML = '';
-
-    const sel = document.getElementById('payPerson');
-    const selected = sel.value;
-
-    // 0 balances go to bottom, others sorted by cash_due (highest to lowest)
-    const peopleSorted = [...data.people].sort((a, b) => {
-      const aDue = Number(a.cash_due || 0);
-      const bDue = Number(b.cash_due || 0);
-      const aZero = Math.abs(aDue) < 0.005;
-      const bZero = Math.abs(bDue) < 0.005;
-
-      if (aZero !== bZero) return aZero ? 1 : -1; // zero goes bottom
-      return bDue - aDue; // high to low
-    });
-
-    peopleSorted.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'row';
-      div.innerHTML = `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash Paid: ${fmtMoney(p.cash_paid_total)}</div></div>
-                       <div class="badge">${fmtMoney(p.cash_due)}</div>`;
-      list.appendChild(div);
-    });
-
-    if (sel.options.length === 0) {
-      peopleSorted.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.person;
-        opt.textContent = p.person;
-        sel.appendChild(opt);
-      });
-    } else {
-      const exists = Array.from(sel.options).some(o => o.value === selected);
-      if (exists) sel.value = selected;
-    }
-
-    const payBy = document.getElementById('payBy');
-    if (!payBy.value) payBy.value = data.me.name;
-
-    // ROLE-BASED VISIBILITY (ONLY THIS WAS ADDED)
-    const role = data.me.role;
-
-    // Admin card only for ADMIN
-    document.getElementById('adminCard').classList.toggle('hidden', role !== 'ADMIN');
-
-    // Payment section only for ADMIN / PAYER / EDITOR
-    const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
-    document.getElementById('payCard').classList.toggle('hidden', !canPay);
   }
 
   async function refreshPayments() {
@@ -245,7 +149,7 @@
       div.innerHTML = `
         <div>
           <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''}</div>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}</div>
           <div class="muted">${p.note || ''}</div>
         </div>
         <div class="badge">${fmtMoney(p.amount)}</div>
@@ -254,22 +158,6 @@
     });
   }
 
-  document.getElementById('tabStatus').onclick = () => setView('status');
-  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); };
-
-  document.getElementById('btnSaveToken').onclick = async () => {
-    const t = tokenInput.value.trim();
-    if (!t) { tokenMsg.textContent = "Token cannot be empty."; return; }
-    localStorage.setItem("wage_token", t);
-    tokenMsg.textContent = "Saved. Refreshing...";
-    await refresh();
-  };
-
-  document.getElementById('btnRefresh').onclick = async () => {
-    if (currentView === 'payments') await refreshPayments();
-    else await refresh();
-  };
-
   document.getElementById('btnAddPayment').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('payPerson').value;
@@ -277,43 +165,25 @@
     const paid_by = document.getElementById('payBy').value;
     const note = document.getElementById('payNote').value;
 
+    // ✅ Method Added
+    const method = document.getElementById('payMethod').value;
+
     const msg = document.getElementById('payMsg');
     msg.textContent = "Sending...";
-    const res = await jsonp("add_payment", { token, person, amount, paid_by, note });
+
+    const res = await jsonp("add_payment", { token, person, amount, paid_by, note, method });
+
     if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
+
     msg.textContent = "Added ✅";
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
-    await refresh();
+    await refreshPayments();
   };
 
-  document.getElementById('btnAddUser').onclick = async () => {
-    const token = getToken();
-    const name = document.getElementById('newUserName').value;
-    const role = document.getElementById('newUserRole').value;
-
-    const msg = document.getElementById('adminMsg');
-    msg.textContent = "Creating...";
-    const res = await jsonp("add_user", { token, name, role });
-    if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
-
-    const base = location.origin + location.pathname;
-    const link = base + '?token=' + encodeURIComponent(res.user.token);
-    msg.textContent = `User: ${res.user.name} (${res.user.role}) ✅  Link: ${link}`;
-    document.getElementById('newUserName').value = '';
-  };
-
-  const saved = localStorage.getItem("wage_token");
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
-  else if (saved) tokenInput.value = saved;
 
-  setView('status');
-  refresh();
-
-  setInterval(() => {
-    if (currentView === 'payments') refreshPayments();
-    else refresh();
-  }, 15000);
+  refreshPayments();
 </script>
 </body>
 </html>
