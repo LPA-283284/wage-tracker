@@ -58,6 +58,9 @@
       <div><div class="muted">Amount</div><input id="payAmount" inputmode="decimal" placeholder="200" /></div>
     </div>
 
+    <!-- ✅ Due line added -->
+    <div class="muted" id="dueLine" style="margin-top:6px;">Due: —</div>
+
     <div style="margin-top:10px;">
       <div class="muted">Payment Method</div>
       <select id="payMethod">
@@ -149,7 +152,8 @@
   function getToken() { return tokenInput.value.trim(); }
 
   let currentView = 'status'; // 'status' | 'payments' | 'settings'
-  let lastRole = ''; // for settings admin visibility
+  let peopleDueMap = {};       // ✅ person -> cash_due
+  let lastRole = '';
 
   function setView(view) {
     currentView = view;
@@ -158,17 +162,20 @@
     document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
     document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
 
-    // Payments tab (payments list + add payment)
+    // Payments tab
     document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
     document.getElementById('payCard').classList.toggle('hidden', view !== 'payments');
 
-    // Settings tab (token + add user)
+    // Settings tab
     document.getElementById('settingsCard').classList.toggle('hidden', view !== 'settings');
 
-    // Tab styles
     document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
     document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
     document.getElementById('tabSettings').classList.toggle('primary', view === 'settings');
+
+    // Admin only shown inside Settings
+    const isAdmin = (lastRole === 'ADMIN');
+    document.getElementById('adminCard').classList.toggle('hidden', !(view === 'settings' && isAdmin));
   }
 
   async function refresh() {
@@ -183,14 +190,12 @@
     lastRole = data.me.role || '';
     document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
 
-    // Totals
     document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
     document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
     document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_cash_due);
     document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
     document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString('en-GB');
 
-    // People list + dropdown
     const list = document.getElementById('peopleList');
     list.innerHTML = '';
 
@@ -206,6 +211,10 @@
       if (aZero !== bZero) return aZero ? 1 : -1;
       return bDue - aDue;
     });
+
+    // ✅ build due map
+    peopleDueMap = {};
+    peopleSorted.forEach(p => { peopleDueMap[p.person] = p.cash_due; });
 
     peopleSorted.forEach(p => {
       const div = document.createElement('div');
@@ -227,7 +236,16 @@
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
 
-    // Payment permissions: show/hide pay form (still only shown in Payments tab)
+    // Due line refresh
+    const currentPerson = sel.value;
+    if (currentPerson) {
+      const due = peopleDueMap[currentPerson] || 0;
+      document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
+    } else {
+      document.getElementById('dueLine').textContent = "Due: —";
+    }
+
+    // Payment permissions: pay form visible only in Payments tab and only if allowed
     const role = data.me.role;
     const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
     document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && canPay));
@@ -261,6 +279,13 @@
       box.appendChild(div);
     });
   }
+
+  // ✅ Person change -> update due line
+  document.getElementById('payPerson').onchange = () => {
+    const person = document.getElementById('payPerson').value;
+    const due = peopleDueMap[person] || 0;
+    document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
+  };
 
   document.getElementById('tabStatus').onclick = async () => { setView('status'); await refresh(); };
   document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refresh(); };
