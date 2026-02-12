@@ -31,6 +31,7 @@
   <div class="card" style="display:flex; gap:10px;">
     <button id="tabStatus" class="primary" style="flex:1;">Status</button>
     <button id="tabPayments" style="flex:1;">Payments</button>
+    <button id="tabSettings" style="flex:1;">Settings</button>
   </div>
 
   <div class="card hidden" id="summaryCard">
@@ -76,16 +77,40 @@
     <div id="paymentsList"></div>
   </div>
 
-  <div class="card">
+  <!-- ✅ Settings tab content -->
+  <div class="card hidden" id="settingsCard">
+    <div style="font-weight:900;margin-bottom:8px;">Settings</div>
+
+    <!-- Token (moved here) -->
     <div class="muted">Token</div>
     <input id="tokenInput" placeholder="token..." />
     <div class="muted" style="margin-top:6px;">You can also share by link: <b>?token=...</b></div>
     <div style="margin-top:10px;"><button id="btnSaveToken" class="primary">Save Token</button></div>
     <div class="muted" id="tokenMsg" style="margin-top:8px;"></div>
+
+    <!-- Add User (moved here) -->
+    <div class="hidden" id="adminCard" style="margin-top:18px;">
+      <hr style="border:none;border-top:1px solid #eee;margin:16px 0;"/>
+      <div style="font-weight:900;margin-bottom:8px;">Admin</div>
+
+      <div style="font-weight:800;margin:10px 0 6px;">Add User</div>
+      <div class="grid">
+        <div><div class="muted">Name</div><input id="newUserName" placeholder="Ali" /></div>
+        <div>
+          <div class="muted">Role</div>
+          <select id="newUserRole">
+            <option>VIEWER</option>
+            <option>PAYER</option>
+            <option>EDITOR</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;"><button id="btnAddUser" class="primary">Create User</button></div>
+      <div class="muted" id="adminMsg" style="margin-top:8px;"></div>
+    </div>
   </div>
 
 <script>
-  // ✅ Saruhan: THIS MUST MATCH YOUR LATEST DEPLOYMENT URL
   const API_URL = "https://script.google.com/macros/s/AKfycbyE7Vqczhafvx74GRIkz_8bc2D9ip4SW_QFW-sEK95fo3s7JkOxdR-HDk1F1X4urw8B/exec";
 
   const qs = new URLSearchParams(location.search);
@@ -109,7 +134,6 @@
 
       const script = document.createElement("script");
       window[cbName] = (data) => { cleanup(); resolve(data); };
-
       script.onerror = () => { cleanup(); reject(new Error("JSONP failed")); };
 
       function cleanup() {
@@ -124,18 +148,27 @@
 
   function getToken() { return tokenInput.value.trim(); }
 
-  let currentView = 'status'; // 'status' | 'payments'
+  let currentView = 'status'; // 'status' | 'payments' | 'settings'
+  let lastRole = ''; // for settings admin visibility
 
   function setView(view) {
     currentView = view;
 
-    document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
+    // Status tab
     document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
     document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
-    document.getElementById('payCard').classList.toggle('hidden', view !== 'status');
 
+    // Payments tab (payments list + add payment)
+    document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
+    document.getElementById('payCard').classList.toggle('hidden', view !== 'payments');
+
+    // Settings tab (token + add user)
+    document.getElementById('settingsCard').classList.toggle('hidden', view !== 'settings');
+
+    // Tab styles
     document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
     document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
+    document.getElementById('tabSettings').classList.toggle('primary', view === 'settings');
   }
 
   async function refresh() {
@@ -147,13 +180,17 @@
 
     tokenMsg.textContent = "";
 
+    lastRole = data.me.role || '';
     document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
+
+    // Totals
     document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
     document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
     document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_cash_due);
     document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
     document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString('en-GB');
 
+    // People list + dropdown
     const list = document.getElementById('peopleList');
     list.innerHTML = '';
 
@@ -161,7 +198,6 @@
     const previouslySelected = sel.value;
     sel.innerHTML = '';
 
-    // non-zero due first, then highest to lowest
     const peopleSorted = [...data.people].sort((a, b) => {
       const aDue = Number(a.cash_due || 0);
       const bDue = Number(b.cash_due || 0);
@@ -191,9 +227,14 @@
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
 
+    // Payment permissions: show/hide pay form (still only shown in Payments tab)
     const role = data.me.role;
     const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
-    document.getElementById('payCard').classList.toggle('hidden', !canPay);
+    document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && canPay));
+
+    // Admin card only in Settings and only ADMIN
+    const isAdmin = (role === 'ADMIN');
+    document.getElementById('adminCard').classList.toggle('hidden', !(currentView === 'settings' && isAdmin));
   }
 
   async function refreshPayments() {
@@ -221,8 +262,9 @@
     });
   }
 
-  document.getElementById('tabStatus').onclick = () => setView('status');
-  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); };
+  document.getElementById('tabStatus').onclick = async () => { setView('status'); await refresh(); };
+  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refresh(); };
+  document.getElementById('tabSettings').onclick = async () => { setView('settings'); await refresh(); };
 
   document.getElementById('btnSaveToken').onclick = async () => {
     const t = tokenInput.value.trim();
@@ -234,7 +276,7 @@
 
   document.getElementById('btnRefresh').onclick = async () => {
     if (currentView === 'payments') await refreshPayments();
-    else await refresh();
+    await refresh();
   };
 
   document.getElementById('btnAddPayment').onclick = async () => {
@@ -249,23 +291,32 @@
     const msg = document.getElementById('payMsg');
     msg.textContent = "Sending...";
 
-    const res = await jsonp("add_payment", {
-      token,
-      person,
-      amount,
-      paid_by,
-      note,
-      method
-    });
-
+    const res = await jsonp("add_payment", { token, person, amount, paid_by, note, method });
     if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
 
     msg.textContent = "Added ✅";
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
 
-    if (currentView === 'payments') await refreshPayments();
-    else await refresh();
+    await refreshPayments();
+    await refresh();
+  };
+
+  document.getElementById('btnAddUser').onclick = async () => {
+    const token = getToken();
+    const name = document.getElementById('newUserName').value.trim();
+    const role = document.getElementById('newUserRole').value;
+
+    const msg = document.getElementById('adminMsg');
+    msg.textContent = "Creating...";
+
+    const res = await jsonp("add_user", { token, name, role });
+    if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
+
+    const base = location.origin + location.pathname;
+    const link = base + '?token=' + encodeURIComponent(res.user.token);
+    msg.textContent = `User: ${res.user.name} (${res.user.role}) ✅  Link: ${link}`;
+    document.getElementById('newUserName').value = '';
   };
 
   const saved = localStorage.getItem("wage_token");
@@ -277,7 +328,7 @@
 
   setInterval(() => {
     if (currentView === 'payments') refreshPayments();
-    else refresh();
+    refresh();
   }, 15000);
 </script>
 </body>
