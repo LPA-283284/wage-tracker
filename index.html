@@ -16,7 +16,7 @@
     input, select { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
     .muted { color:#666; font-size:12px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .hidden { display:none; }
+    .hidden { display:none !important; }
 
     /* Modal */
     .overlay {
@@ -237,8 +237,8 @@
 
   function getToken() { return tokenInput.value.trim(); }
 
-  let currentView = 'status'; // 'status' | 'payments' | 'settings'
-  let peopleDueMap = {};       // person -> due
+  let currentView = 'status';
+  let peopleDueMap = {};
   let lastRole = '';
 
   function setView(view) {
@@ -399,7 +399,6 @@
     });
   }
 
-  // person change -> update due line
   document.getElementById('payPerson').onchange = () => {
     const person = document.getElementById('payPerson').value;
     const due = peopleDueMap[person] || 0;
@@ -442,8 +441,7 @@
   let isDrawing = false;
   let lastPt = null;
 
-  // pending signing
-  let pending = null; // { kind: 'PAYMENT'|'ADVANCE', id, person, amount, method }
+  let pending = null; // { kind, id, person, amount, method }
 
   function resizeCanvas() {
     const rect = sigBox.getBoundingClientRect();
@@ -459,7 +457,6 @@
 
   function clearSignature() {
     ctx2d.clearRect(0,0,sigCanvas.width, sigCanvas.height);
-    // draw subtle guide line
     ctx2d.save();
     ctx2d.globalAlpha = 0.15;
     ctx2d.beginPath();
@@ -471,6 +468,7 @@
   }
 
   function openSignatureModal(info) {
+    if (!info || !info.id) return;            // ✅ GUARD: asla boş/undefined ile açma
     pending = info;
     sigSub.textContent = `${info.person} • ${fmtMoney(info.amount)} • ${info.method}`;
     sigMsg.textContent = '';
@@ -480,7 +478,8 @@
 
   function closeSignatureModal() {
     pending = null;
-    sigOverlay.classList.add('hidden');
+    sigOverlay.classList.add('hidden');       // ✅ kesin kapat
+    sigMsg.textContent = '';
   }
 
   function hasInk() {
@@ -492,21 +491,15 @@
   }
 
   function canvasToPngDataUrl() {
-    // create a clean export canvas at device size already
     return sigCanvas.toDataURL('image/png');
   }
 
   function getPointFromEvent(ev) {
     const rect = sigCanvas.getBoundingClientRect();
-    const x = (ev.clientX - rect.left);
-    const y = (ev.clientY - rect.top);
-    return {x,y};
+    return { x: (ev.clientX - rect.left), y: (ev.clientY - rect.top) };
   }
 
-  function startDraw(ev){
-    isDrawing = true;
-    lastPt = getPointFromEvent(ev);
-  }
+  function startDraw(ev){ isDrawing = true; lastPt = getPointFromEvent(ev); }
   function moveDraw(ev){
     if (!isDrawing) return;
     const pt = getPointFromEvent(ev);
@@ -516,12 +509,8 @@
     ctx2d.stroke();
     lastPt = pt;
   }
-  function endDraw(){
-    isDrawing = false;
-    lastPt = null;
-  }
+  function endDraw(){ isDrawing = false; lastPt = null; }
 
-  // pointer events
   sigCanvas.addEventListener('pointerdown', (e)=>{ sigCanvas.setPointerCapture(e.pointerId); startDraw(e); });
   sigCanvas.addEventListener('pointermove', moveDraw);
   sigCanvas.addEventListener('pointerup', endDraw);
@@ -531,12 +520,8 @@
   document.getElementById('btnSigClose').onclick = closeSignatureModal;
 
   document.getElementById('btnSigSave').onclick = async () => {
-    if (!pending) return;
-
-    if (!hasInk()) {
-      sigMsg.textContent = 'Please sign before saving.';
-      return;
-    }
+    if (!pending) { closeSignatureModal(); return; }
+    if (!hasInk()) { sigMsg.textContent = 'Please sign before saving.'; return; }
 
     const token = getToken();
     if (!token) return;
@@ -544,28 +529,17 @@
     const signature = canvasToPngDataUrl();
     sigMsg.textContent = 'Saving...';
 
-    const res = await jsonp('sign_tx', {
-      token,
-      id: pending.id,
-      kind: pending.kind,
-      signature
-    });
+    const res = await jsonp('sign_tx', { token, id: pending.id, kind: pending.kind, signature });
 
-    if (!res.ok) {
-      sigMsg.textContent = 'Error: ' + (res.error || '');
-      return;
-    }
+    if (!res.ok) { sigMsg.textContent = 'Error: ' + (res.error || ''); return; }
 
-    sigMsg.textContent = 'Saved ✅';
     closeSignatureModal();
-
-    // refresh lists
     await refreshPayments();
     await refreshAdvances();
     await refresh();
   };
 
-  /* ---------- Add Payment (create row first, then signature) ---------- */
+  /* ---------- Add Payment -> then signature ---------- */
   document.getElementById('btnAddPayment').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('payPerson').value;
@@ -580,24 +554,17 @@
     const res = await jsonp("add_payment", { token, person, amount, paid_by, note, method });
     if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
 
-    msg.textContent = "Payment saved. Please sign...";
+    msg.textContent = "Saved. Please sign...";
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
 
-    // open signature modal using returned id
-    openSignatureModal({
-      kind: 'PAYMENT',
-      id: res.id,
-      person,
-      amount: Number(amount || 0),
-      method
-    });
+    openSignatureModal({ kind:'PAYMENT', id: res.id, person, amount: Number(amount || 0), method });
 
     await refreshPayments();
     await refresh();
   };
 
-  /* ---------- Add Advance (create row first, then signature) ---------- */
+  /* ---------- Add Advance -> then signature ---------- */
   document.getElementById('btnAddAdvance').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('advPerson').value;
@@ -612,17 +579,11 @@
     const res = await jsonp("add_advance", { token, person, amount, given_by, note, method });
     if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
 
-    msg.textContent = "Advance saved. Please sign...";
+    msg.textContent = "Saved. Please sign...";
     document.getElementById('advAmount').value = '';
     document.getElementById('advNote').value = '';
 
-    openSignatureModal({
-      kind: 'ADVANCE',
-      id: res.id,
-      person,
-      amount: Number(amount || 0),
-      method
-    });
+    openSignatureModal({ kind:'ADVANCE', id: res.id, person, amount: Number(amount || 0), method });
 
     await refreshAdvances();
   };
@@ -648,11 +609,12 @@
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
-  // initial
+  /* ✅ FIX: sayfa açılışında modal asla açık kalmasın */
+  closeSignatureModal();
+
   setView('status');
   refresh();
 
-  // auto refresh
   setInterval(() => {
     if (currentView === 'payments') {
       refreshPayments();
@@ -661,7 +623,6 @@
     refresh();
   }, 15000);
 
-  // ensure modal canvas resizes correctly
   window.addEventListener('resize', () => {
     if (!sigOverlay.classList.contains('hidden')) resizeCanvas();
   });
