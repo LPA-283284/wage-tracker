@@ -10,13 +10,30 @@
     .card { border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0; }
     .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
     .row:last-child { border-bottom:none; }
-    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; }
+    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; white-space:nowrap; }
     button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
     button.primary { background:#111; color:#fff; border-color:#111; }
     input, select { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
     .muted { color:#666; font-size:12px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .hidden { display:none; }
+    .tabs2 { display:flex; gap:10px; }
+    .tabs2 button { flex:1; }
+    .hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+
+    /* Signature modal */
+    .modalBack {
+      position: fixed; inset: 0; background: rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center; padding: 14px;
+      z-index: 9999;
+    }
+    .modal {
+      width: min(520px, 100%);
+      background:#fff; border-radius:14px; padding:12px; border:1px solid #ddd;
+    }
+    .sigWrap { border:1px solid #ccc; border-radius:12px; overflow:hidden; }
+    canvas { display:block; width:100%; height:180px; touch-action:none; }
+    .modalTop { display:flex; justify-content:space-between; align-items:center; gap:10px; }
   </style>
 </head>
 <body>
@@ -34,6 +51,7 @@
     <button id="tabSettings" style="flex:1;">Settings</button>
   </div>
 
+  <!-- STATUS -->
   <div class="card hidden" id="summaryCard">
     <div style="font-weight:900;margin-bottom:8px;">Totals</div>
     <div class="grid">
@@ -50,15 +68,23 @@
     <div id="peopleList"></div>
   </div>
 
+  <!-- PAYMENTS -->
+  <div class="card hidden" id="paymentsTabsCard">
+    <div class="tabs2">
+      <button id="tabWagePay" class="primary">Wage Payment</button>
+      <button id="tabAdvance">Advance</button>
+    </div>
+  </div>
+
+  <!-- Wage Payment form -->
   <div class="card hidden" id="payCard">
-    <div style="font-weight:900;margin-bottom:8px;">Add Payment</div>
+    <div style="font-weight:900;margin-bottom:8px;">Wage Payment (with signature)</div>
 
     <div class="grid">
       <div><div class="muted">Person</div><select id="payPerson"></select></div>
       <div><div class="muted">Amount</div><input id="payAmount" inputmode="decimal" placeholder="200" /></div>
     </div>
 
-    <!-- ✅ Due line added -->
     <div class="muted" id="dueLine" style="margin-top:6px;">Due: —</div>
 
     <div style="margin-top:10px;">
@@ -71,29 +97,53 @@
 
     <div style="margin-top:10px;"><div class="muted">Paid By</div><input id="payBy" placeholder="Saruhan / Friend" /></div>
     <div style="margin-top:10px;"><div class="muted">Note</div><input id="payNote" placeholder="Payment note" /></div>
-    <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Add Payment</button></div>
+
+    <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Continue to Signature</button></div>
     <div class="muted" id="payMsg" style="margin-top:8px;"></div>
   </div>
 
+  <!-- Advance form -->
+  <div class="card hidden" id="advanceCard">
+    <div style="font-weight:900;margin-bottom:8px;">Advance (with signature)</div>
+
+    <div class="grid">
+      <div><div class="muted">Person</div><select id="advPerson"></select></div>
+      <div><div class="muted">Amount</div><input id="advAmount" inputmode="decimal" placeholder="200" /></div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="muted">Method</div>
+      <select id="advMethod">
+        <option value="CASH">Cash</option>
+        <option value="BANK">Bank Transfer</option>
+      </select>
+    </div>
+
+    <div style="margin-top:10px;"><div class="muted">Paid By</div><input id="advBy" placeholder="Saruhan / Friend" /></div>
+    <div style="margin-top:10px;"><div class="muted">Note</div><input id="advNote" placeholder="Advance note" /></div>
+
+    <div style="margin-top:12px;"><button id="btnAddAdvance" class="primary">Continue to Signature</button></div>
+    <div class="muted" id="advMsg" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- History -->
   <div class="card hidden" id="paymentsCard">
-    <div style="font-weight:900;margin-bottom:8px;">Payments History</div>
+    <div style="font-weight:900;margin-bottom:8px;" id="historyTitle">Payments History</div>
     <div id="paymentsList"></div>
   </div>
 
-  <!-- ✅ Settings tab content -->
+  <!-- SETTINGS -->
   <div class="card hidden" id="settingsCard">
     <div style="font-weight:900;margin-bottom:8px;">Settings</div>
 
-    <!-- Token (moved here) -->
     <div class="muted">Token</div>
     <input id="tokenInput" placeholder="token..." />
     <div class="muted" style="margin-top:6px;">You can also share by link: <b>?token=...</b></div>
     <div style="margin-top:10px;"><button id="btnSaveToken" class="primary">Save Token</button></div>
     <div class="muted" id="tokenMsg" style="margin-top:8px;"></div>
 
-    <!-- Add User (moved here) -->
     <div class="hidden" id="adminCard" style="margin-top:18px;">
-      <hr style="border:none;border-top:1px solid #eee;margin:16px 0;"/>
+      <hr class="hr" />
       <div style="font-weight:900;margin-bottom:8px;">Admin</div>
 
       <div style="font-weight:800;margin:10px 0 6px;">Add User</div>
@@ -110,6 +160,32 @@
       </div>
       <div style="margin-top:12px;"><button id="btnAddUser" class="primary">Create User</button></div>
       <div class="muted" id="adminMsg" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- Signature Modal -->
+  <div id="sigBack" class="modalBack hidden">
+    <div class="modal">
+      <div class="modalTop">
+        <div>
+          <div style="font-weight:900;">Signature</div>
+          <div class="muted" id="sigInfo">—</div>
+        </div>
+        <button id="btnSigClose">Close</button>
+      </div>
+
+      <div style="margin-top:10px;" class="sigWrap">
+        <canvas id="sigCanvas" width="600" height="360"></canvas>
+      </div>
+
+      <div class="muted" style="margin-top:8px;">Please sign above, then press Save.</div>
+
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button id="btnSigClear">Clear</button>
+        <button id="btnSigSave" class="primary" style="flex:1;">Save Signature</button>
+      </div>
+
+      <div class="muted" id="sigMsg" style="margin-top:8px;"></div>
     </div>
   </div>
 
@@ -143,7 +219,6 @@
         delete window[cbName];
         script.remove();
       }
-
       script.src = u.toString();
       document.body.appendChild(script);
     });
@@ -151,31 +226,46 @@
 
   function getToken() { return tokenInput.value.trim(); }
 
-  let currentView = 'status'; // 'status' | 'payments' | 'settings'
-  let peopleDueMap = {};       // ✅ person -> cash_due
+  let currentView = 'status'; // status | payments | settings
+  let paymentsSub = 'wage';   // wage | advance
+  let peopleDueMap = {};
   let lastRole = '';
 
   function setView(view) {
     currentView = view;
 
-    // Status tab
     document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
     document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
 
-    // Payments tab
+    document.getElementById('paymentsTabsCard').classList.toggle('hidden', view !== 'payments');
     document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
-    document.getElementById('payCard').classList.toggle('hidden', view !== 'payments');
 
-    // Settings tab
     document.getElementById('settingsCard').classList.toggle('hidden', view !== 'settings');
 
     document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
     document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
     document.getElementById('tabSettings').classList.toggle('primary', view === 'settings');
 
-    // Admin only shown inside Settings
     const isAdmin = (lastRole === 'ADMIN');
     document.getElementById('adminCard').classList.toggle('hidden', !(view === 'settings' && isAdmin));
+
+    // sub tabs
+    document.getElementById('tabWagePay').classList.toggle('primary', paymentsSub === 'wage');
+    document.getElementById('tabAdvance').classList.toggle('primary', paymentsSub === 'advance');
+
+    document.getElementById('payCard').classList.toggle('hidden', !(view === 'payments' && paymentsSub === 'wage'));
+    document.getElementById('advanceCard').classList.toggle('hidden', !(view === 'payments' && paymentsSub === 'advance'));
+  }
+
+  function setPaymentsSub(which) {
+    paymentsSub = which;
+    document.getElementById('tabWagePay').classList.toggle('primary', which === 'wage');
+    document.getElementById('tabAdvance').classList.toggle('primary', which === 'advance');
+
+    document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && which === 'wage'));
+    document.getElementById('advanceCard').classList.toggle('hidden', !(currentView === 'payments' && which === 'advance'));
+
+    document.getElementById('historyTitle').textContent = (which === 'wage') ? 'Payments History' : 'Advance History';
   }
 
   async function refresh() {
@@ -184,7 +274,6 @@
 
     const data = await jsonp("summary", { token });
     if (!data.ok) { tokenMsg.textContent = "Error: " + (data.error || ""); return; }
-
     tokenMsg.textContent = "";
 
     lastRole = data.me.role || '';
@@ -199,9 +288,13 @@
     const list = document.getElementById('peopleList');
     list.innerHTML = '';
 
-    const sel = document.getElementById('payPerson');
-    const previouslySelected = sel.value;
-    sel.innerHTML = '';
+    const selPay = document.getElementById('payPerson');
+    const prevPay = selPay.value;
+    selPay.innerHTML = '';
+
+    const selAdv = document.getElementById('advPerson');
+    const prevAdv = selAdv.value;
+    selAdv.innerHTML = '';
 
     const peopleSorted = [...data.people].sort((a, b) => {
       const aDue = Number(a.cash_due || 0);
@@ -212,7 +305,6 @@
       return bDue - aDue;
     });
 
-    // ✅ build due map
     peopleDueMap = {};
     peopleSorted.forEach(p => { peopleDueMap[p.person] = p.cash_due; });
 
@@ -220,24 +312,34 @@
       const div = document.createElement('div');
       div.className = 'row';
       div.innerHTML =
-        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash : ${fmtMoney(p.cash_paid_total)} • Bank : ${fmtMoney(p.bank_paid_total)}</div></div>
+        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash: ${fmtMoney(p.cash_paid_total)} • Bank: ${fmtMoney(p.bank_paid_total)}</div></div>
          <div class="badge">${fmtMoney(p.cash_due)}</div>`;
       list.appendChild(div);
 
-      const opt = document.createElement('option');
-      opt.value = p.person;
-      opt.textContent = p.person;
-      sel.appendChild(opt);
+      const opt1 = document.createElement('option');
+      opt1.value = p.person;
+      opt1.textContent = p.person;
+      selPay.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = p.person;
+      opt2.textContent = p.person;
+      selAdv.appendChild(opt2);
     });
 
-    const stillExists = Array.from(sel.options).some(o => o.value === previouslySelected);
-    if (stillExists) sel.value = previouslySelected;
+    const stillPay = Array.from(selPay.options).some(o => o.value === prevPay);
+    if (stillPay) selPay.value = prevPay;
+    const stillAdv = Array.from(selAdv.options).some(o => o.value === prevAdv);
+    if (stillAdv) selAdv.value = prevAdv;
 
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
 
-    // Due line refresh
-    const currentPerson = sel.value;
+    const advBy = document.getElementById('advBy');
+    if (!advBy.value) advBy.value = data.me.name;
+
+    // Due line
+    const currentPerson = selPay.value;
     if (currentPerson) {
       const due = peopleDueMap[currentPerson] || 0;
       document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
@@ -245,33 +347,39 @@
       document.getElementById('dueLine').textContent = "Due: —";
     }
 
-    // Payment permissions: pay form visible only in Payments tab and only if allowed
+    // role based
     const role = data.me.role;
     const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
-    document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && canPay));
+    document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && paymentsSub === 'wage' && canPay));
+    document.getElementById('advanceCard').classList.toggle('hidden', !(currentView === 'payments' && paymentsSub === 'advance' && canPay));
 
-    // Admin card only in Settings and only ADMIN
     const isAdmin = (role === 'ADMIN');
     document.getElementById('adminCard').classList.toggle('hidden', !(currentView === 'settings' && isAdmin));
   }
 
-  async function refreshPayments() {
+  async function refreshHistory() {
     const token = getToken();
     if (!token) return;
 
-    const data = await jsonp("payments", { token });
+    const action = (paymentsSub === 'wage') ? 'payments' : 'advances';
+    const data = await jsonp(action, { token });
     if (!data.ok) return;
 
     const box = document.getElementById('paymentsList');
     box.innerHTML = '';
 
-    data.payments.forEach(p => {
+    const items = (paymentsSub === 'wage') ? (data.payments || []) : (data.advances || []);
+
+    items.forEach(p => {
       const div = document.createElement('div');
       div.className = 'row';
+
+      const signed = (p.signature_svg && String(p.signature_svg).trim().length > 0) ? 'Signed' : 'No signature';
+
       div.innerHTML = `
         <div>
           <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}</div>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''} • ${signed}</div>
           <div class="muted">${p.note || ''}</div>
         </div>
         <div class="badge">${fmtMoney(p.amount)}</div>
@@ -280,53 +388,51 @@
     });
   }
 
-  // ✅ Person change -> update due line
+  // Due line update
   document.getElementById('payPerson').onchange = () => {
     const person = document.getElementById('payPerson').value;
     const due = peopleDueMap[person] || 0;
     document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
   };
 
+  // Tabs
   document.getElementById('tabStatus').onclick = async () => { setView('status'); await refresh(); };
-  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refresh(); };
+  document.getElementById('tabPayments').onclick = async () => {
+    setView('payments');
+    await refresh();
+    await refreshHistory();
+  };
   document.getElementById('tabSettings').onclick = async () => { setView('settings'); await refresh(); };
 
+  document.getElementById('tabWagePay').onclick = async () => {
+    setPaymentsSub('wage');
+    setView('payments');
+    await refreshHistory();
+  };
+
+  document.getElementById('tabAdvance').onclick = async () => {
+    setPaymentsSub('advance');
+    setView('payments');
+    await refreshHistory();
+  };
+
+  // Refresh button
+  document.getElementById('btnRefresh').onclick = async () => {
+    if (currentView === 'payments') await refreshHistory();
+    await refresh();
+  };
+
+  // Save token
   document.getElementById('btnSaveToken').onclick = async () => {
     const t = tokenInput.value.trim();
     if (!t) { tokenMsg.textContent = "Token cannot be empty."; return; }
     localStorage.setItem("wage_token", t);
     tokenMsg.textContent = "Saved. Refreshing...";
     await refresh();
+    if (currentView === 'payments') await refreshHistory();
   };
 
-  document.getElementById('btnRefresh').onclick = async () => {
-    if (currentView === 'payments') await refreshPayments();
-    await refresh();
-  };
-
-  document.getElementById('btnAddPayment').onclick = async () => {
-    const token = getToken();
-    const person = document.getElementById('payPerson').value;
-    const amount = document.getElementById('payAmount').value;
-
-    const paid_by = document.getElementById('payBy').value.trim();
-    const note = document.getElementById('payNote').value.trim();
-    const method = document.getElementById('payMethod').value;
-
-    const msg = document.getElementById('payMsg');
-    msg.textContent = "Sending...";
-
-    const res = await jsonp("add_payment", { token, person, amount, paid_by, note, method });
-    if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
-
-    msg.textContent = "Added ✅";
-    document.getElementById('payAmount').value = '';
-    document.getElementById('payNote').value = '';
-
-    await refreshPayments();
-    await refresh();
-  };
-
+  // Admin add user
   document.getElementById('btnAddUser').onclick = async () => {
     const token = getToken();
     const name = document.getElementById('newUserName').value.trim();
@@ -344,15 +450,184 @@
     document.getElementById('newUserName').value = '';
   };
 
+  // ---------------- Signature capture (SVG path) ----------------
+  const sigBack = document.getElementById('sigBack');
+  const sigCanvas = document.getElementById('sigCanvas');
+  const sigCtx = sigCanvas.getContext('2d');
+
+  let sigStrokes = [];   // array of strokes; each stroke is array of {x,y}
+  let sigDown = false;
+  let sigCurrent = null;
+
+  function sigResetCanvas() {
+    sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+    sigCtx.lineWidth = 4;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+  }
+
+  function getCanvasPos(evt) {
+    const rect = sigCanvas.getBoundingClientRect();
+    const touch = evt.touches && evt.touches[0];
+    const clientX = touch ? touch.clientX : evt.clientX;
+    const clientY = touch ? touch.clientY : evt.clientY;
+    const x = (clientX - rect.left) * (sigCanvas.width / rect.width);
+    const y = (clientY - rect.top) * (sigCanvas.height / rect.height);
+    return { x, y };
+  }
+
+  function sigStart(evt) {
+    evt.preventDefault();
+    sigDown = true;
+    sigCurrent = [];
+    const p = getCanvasPos(evt);
+    sigCurrent.push(p);
+    sigCtx.beginPath();
+    sigCtx.moveTo(p.x, p.y);
+  }
+
+  function sigMove(evt) {
+    if (!sigDown) return;
+    evt.preventDefault();
+    const p = getCanvasPos(evt);
+    sigCurrent.push(p);
+    sigCtx.lineTo(p.x, p.y);
+    sigCtx.stroke();
+  }
+
+  function sigEnd(evt) {
+    if (!sigDown) return;
+    evt.preventDefault();
+    sigDown = false;
+    if (sigCurrent && sigCurrent.length) sigStrokes.push(sigCurrent);
+    sigCurrent = null;
+  }
+
+  sigCanvas.addEventListener('mousedown', sigStart);
+  sigCanvas.addEventListener('mousemove', sigMove);
+  window.addEventListener('mouseup', sigEnd);
+
+  sigCanvas.addEventListener('touchstart', sigStart, { passive:false });
+  sigCanvas.addEventListener('touchmove', sigMove, { passive:false });
+  sigCanvas.addEventListener('touchend', sigEnd, { passive:false });
+
+  function strokesToSvgPath(strokes) {
+    // compact path, rounded ints to reduce size
+    const parts = [];
+    strokes.forEach(st => {
+      if (!st || st.length < 2) return;
+      const p0 = st[0];
+      parts.push(`M${Math.round(p0.x)} ${Math.round(p0.y)}`);
+      for (let i=1;i<st.length;i++) {
+        const p = st[i];
+        parts.push(`L${Math.round(p.x)} ${Math.round(p.y)}`);
+      }
+    });
+    return parts.join(' ');
+  }
+
+  function signatureIsEmpty() {
+    return !sigStrokes.length || sigStrokes.every(s => !s || s.length < 2);
+  }
+
+  function openSigModal(infoText, onSave) {
+    document.getElementById('sigInfo').textContent = infoText;
+    document.getElementById('sigMsg').textContent = '';
+    sigStrokes = [];
+    sigResetCanvas();
+    sigBack.classList.remove('hidden');
+
+    const saveBtn = document.getElementById('btnSigSave');
+    saveBtn.onclick = async () => {
+      const msg = document.getElementById('sigMsg');
+      if (signatureIsEmpty()) { msg.textContent = "Please sign first."; return; }
+
+      msg.textContent = "Saving...";
+      const svgPath = strokesToSvgPath(sigStrokes);
+      try {
+        await onSave(svgPath);
+        msg.textContent = "Saved ✅";
+        sigBack.classList.add('hidden');
+      } catch (e) {
+        msg.textContent = "Error: " + (e && e.message ? e.message : e);
+      }
+    };
+  }
+
+  document.getElementById('btnSigClose').onclick = () => sigBack.classList.add('hidden');
+  document.getElementById('btnSigClear').onclick = () => { sigStrokes = []; sigResetCanvas(); };
+
+  // ---------------- Actions: Wage Payment + Advance with signature ----------------
+  document.getElementById('btnAddPayment').onclick = async () => {
+    const token = getToken();
+    const person = document.getElementById('payPerson').value;
+    const amount = document.getElementById('payAmount').value;
+    const paid_by = document.getElementById('payBy').value.trim();
+    const note = document.getElementById('payNote').value.trim();
+    const method = document.getElementById('payMethod').value;
+
+    const msg = document.getElementById('payMsg');
+    msg.textContent = "";
+
+    if (!person) { msg.textContent = "Person required."; return; }
+    if (!(Number(amount) > 0)) { msg.textContent = "Amount must be > 0."; return; }
+
+    openSigModal(`Wage payment receipt • ${person} • ${fmtMoney(amount)} • ${method}`, async (signature_svg) => {
+      const res = await jsonp("add_payment_signed", {
+        token, person, amount, paid_by, note, method,
+        signer_name: person,
+        signature_svg
+      });
+      if (!res.ok) throw new Error(res.error || "Failed");
+      msg.textContent = "Added ✅";
+      document.getElementById('payAmount').value = '';
+      document.getElementById('payNote').value = '';
+      await refreshHistory();
+      await refresh();
+    });
+  };
+
+  document.getElementById('btnAddAdvance').onclick = async () => {
+    const token = getToken();
+    const person = document.getElementById('advPerson').value;
+    const amount = document.getElementById('advAmount').value;
+    const paid_by = document.getElementById('advBy').value.trim();
+    const note = document.getElementById('advNote').value.trim();
+    const method = document.getElementById('advMethod').value;
+
+    const msg = document.getElementById('advMsg');
+    msg.textContent = "";
+
+    if (!person) { msg.textContent = "Person required."; return; }
+    if (!(Number(amount) > 0)) { msg.textContent = "Amount must be > 0."; return; }
+
+    openSigModal(`Advance receipt • ${person} • ${fmtMoney(amount)} • ${method}`, async (signature_svg) => {
+      const res = await jsonp("add_advance_signed", {
+        token, person, amount, paid_by, note, method,
+        signer_name: person,
+        signature_svg
+      });
+      if (!res.ok) throw new Error(res.error || "Failed");
+      msg.textContent = "Added ✅";
+      document.getElementById('advAmount').value = '';
+      document.getElementById('advNote').value = '';
+      await refreshHistory();
+      await refresh();
+    });
+  };
+
+  // init token
   const saved = localStorage.getItem("wage_token");
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
   setView('status');
+  setPaymentsSub('wage');
+
   refresh();
 
   setInterval(() => {
-    if (currentView === 'payments') refreshPayments();
+    if (currentView === 'payments') refreshHistory();
     refresh();
   }, 15000);
 </script>
