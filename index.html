@@ -220,7 +220,7 @@
       const div = document.createElement('div');
       div.className = 'row';
       div.innerHTML =
-        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash Paid: ${fmtMoney(p.cash_paid_total)} • Bank Paid: ${fmtMoney(p.bank_paid_total)}</div></div>
+        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash : ${fmtMoney(p.cash_paid_total)} • Bank : ${fmtMoney(p.bank_paid_total)}</div></div>
          <div class="badge">${fmtMoney(p.cash_due)}</div>`;
       list.appendChild(div);
 
