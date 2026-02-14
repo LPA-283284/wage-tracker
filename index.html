@@ -270,7 +270,6 @@
     if (!data.ok) { tokenMsg.textContent = "Error: " + (data.error || ""); return; }
 
     tokenMsg.textContent = "";
-
     lastRole = data.me.role || '';
     document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
 
@@ -365,7 +364,7 @@
       div.innerHTML = `
         <div>
           <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}${p.signed ? '' : ' • UNSIGNED'}</div>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}</div>
           <div class="muted">${p.note || ''}</div>
         </div>
         <div class="badge">${fmtMoney(p.amount)}</div>
@@ -375,28 +374,8 @@
   }
 
   async function refreshAdvances() {
-    const token = getToken();
-    if (!token) return;
-
-    const data = await jsonp("advances", { token });
-    if (!data.ok) return;
-
     const box = document.getElementById('advList');
     box.innerHTML = '';
-
-    data.advances.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'row';
-      div.innerHTML = `
-        <div>
-          <b>${p.person}</b>
-          <div class="muted">${p.given_by || ''} • ${p.date || ''} • ${p.method || ''}${p.signed ? '' : ' • UNSIGNED'}</div>
-          <div class="muted">${p.note || ''}</div>
-        </div>
-        <div class="badge">${fmtMoney(p.amount)}</div>
-      `;
-      box.appendChild(div);
-    });
   }
 
   document.getElementById('payPerson').onchange = () => {
@@ -430,7 +409,7 @@
     await refresh();
   };
 
-  /* ---------- Signature Logic ---------- */
+  /* ---------- Signature Logic (SVG PATH) ---------- */
   const sigOverlay = document.getElementById('sigOverlay');
   const sigSub = document.getElementById('sigSub');
   const sigMsg = document.getElementById('sigMsg');
@@ -441,7 +420,12 @@
   let isDrawing = false;
   let lastPt = null;
 
-  let pending = null; // { kind, id, person, amount, method }
+  // ✅ strokes: [ [ [x,y], [x,y]... ], [ ... ] ]
+  let strokes = [];
+  let currentStroke = null;
+
+  // pending signing
+  let pending = null; // { kind:'PAYMENT'|'ADVANCE', id, person, amount, method }
 
   function resizeCanvas() {
     const rect = sigBox.getBoundingClientRect();
@@ -455,6 +439,11 @@
     clearSignature();
   }
 
+  function resetStrokes() {
+    strokes = [];
+    currentStroke = null;
+  }
+
   function clearSignature() {
     ctx2d.clearRect(0,0,sigCanvas.width, sigCanvas.height);
     ctx2d.save();
@@ -465,10 +454,11 @@
     ctx2d.stroke();
     ctx2d.restore();
     sigMsg.textContent = '';
+    resetStrokes();
   }
 
   function openSignatureModal(info) {
-    if (!info || !info.id) return;            // ✅ GUARD: asla boş/undefined ile açma
+    if (!info || !info.id) return;
     pending = info;
     sigSub.textContent = `${info.person} • ${fmtMoney(info.amount)} • ${info.method}`;
     sigMsg.textContent = '';
@@ -478,20 +468,8 @@
 
   function closeSignatureModal() {
     pending = null;
-    sigOverlay.classList.add('hidden');       // ✅ kesin kapat
+    sigOverlay.classList.add('hidden');
     sigMsg.textContent = '';
-  }
-
-  function hasInk() {
-    const img = ctx2d.getImageData(0,0,sigCanvas.width,sigCanvas.height).data;
-    for (let i=3; i<img.length; i+=4) {
-      if (img[i] !== 0) return true;
-    }
-    return false;
-  }
-
-  function canvasToPngDataUrl() {
-    return sigCanvas.toDataURL('image/png');
   }
 
   function getPointFromEvent(ev) {
@@ -499,17 +477,70 @@
     return { x: (ev.clientX - rect.left), y: (ev.clientY - rect.top) };
   }
 
-  function startDraw(ev){ isDrawing = true; lastPt = getPointFromEvent(ev); }
+  function addPointToStroke(pt) {
+    if (!currentStroke) return;
+    // ✅ küçük olsun diye 1 ondalık
+    currentStroke.push([+(pt.x.toFixed(1)), +(pt.y.toFixed(1))]);
+  }
+
+  function startDraw(ev){
+    isDrawing = true;
+    lastPt = getPointFromEvent(ev);
+
+    currentStroke = [];
+    strokes.push(currentStroke);
+    addPointToStroke(lastPt);
+  }
+
   function moveDraw(ev){
     if (!isDrawing) return;
     const pt = getPointFromEvent(ev);
+
     ctx2d.beginPath();
     ctx2d.moveTo(lastPt.x, lastPt.y);
     ctx2d.lineTo(pt.x, pt.y);
     ctx2d.stroke();
+
+    addPointToStroke(pt);
     lastPt = pt;
   }
-  function endDraw(){ isDrawing = false; lastPt = null; }
+
+  function endDraw(){
+    isDrawing = false;
+    lastPt = null;
+    currentStroke = null;
+  }
+
+  function hasInk() {
+    // stroke bazlı kontrol
+    return strokes.some(s => s && s.length >= 2);
+  }
+
+  function strokesToSvgPath() {
+    // ✅ çok büyürse downsample
+    const MAX_POINTS = 800;
+
+    let total = 0;
+    strokes.forEach(s => { total += (s ? s.length : 0); });
+
+    let step = 1;
+    if (total > MAX_POINTS) step = Math.ceil(total / MAX_POINTS);
+
+    let path = '';
+    strokes.forEach(s => {
+      if (!s || s.length === 0) return;
+      // downsample
+      const pts = (step === 1) ? s : s.filter((_,i)=> i % step === 0);
+      if (pts.length === 0) return;
+
+      path += `M ${pts[0][0]} ${pts[0][1]} `;
+      for (let i=1; i<pts.length; i++) {
+        path += `L ${pts[i][0]} ${pts[i][1]} `;
+      }
+    });
+
+    return path.trim();
+  }
 
   sigCanvas.addEventListener('pointerdown', (e)=>{ sigCanvas.setPointerCapture(e.pointerId); startDraw(e); });
   sigCanvas.addEventListener('pointermove', moveDraw);
@@ -526,16 +557,23 @@
     const token = getToken();
     if (!token) return;
 
-    const signature = canvasToPngDataUrl();
+    const signature_svg_path = strokesToSvgPath();
     sigMsg.textContent = 'Saving...';
 
-    const res = await jsonp('sign_tx', { token, id: pending.id, kind: pending.kind, signature });
+    const res = await jsonp('sign_tx', {
+      token,
+      id: pending.id,
+      kind: pending.kind,
+      person: pending.person,
+      amount: pending.amount,
+      method: pending.method,
+      signature_svg_path
+    });
 
     if (!res.ok) { sigMsg.textContent = 'Error: ' + (res.error || ''); return; }
 
     closeSignatureModal();
     await refreshPayments();
-    await refreshAdvances();
     await refresh();
   };
 
@@ -586,6 +624,7 @@
     openSignatureModal({ kind:'ADVANCE', id: res.id, person, amount: Number(amount || 0), method });
 
     await refreshAdvances();
+    await refresh();
   };
 
   document.getElementById('btnAddUser').onclick = async () => {
@@ -609,7 +648,7 @@
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
-  /* ✅ FIX: sayfa açılışında modal asla açık kalmasın */
+  // ✅ never start with open signature
   closeSignatureModal();
 
   setView('status');
