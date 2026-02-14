@@ -8,9 +8,9 @@
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; margin: 12px; }
     .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
     .card { border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0; background:#fff; }
-    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; align-items:center; }
     .row:last-child { border-bottom:none; }
-    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; }
+    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; white-space:nowrap; }
     button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
     button.primary { background:#111; color:#fff; border-color:#111; }
     input, select { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
@@ -18,7 +18,6 @@
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .hidden { display:none !important; }
 
-    /* Modal */
     .overlay {
       position:fixed; inset:0;
       background: rgba(0,0,0,.45);
@@ -75,7 +74,7 @@
     <div class="grid">
       <div><div class="muted">Total WAGE</div><div style="font-size:18px;font-weight:900;" id="tWage">—</div></div>
       <div><div class="muted">Total Cash Paid</div><div style="font-size:18px;font-weight:900;" id="tCashPaid">—</div></div>
-      <div><div class="muted">Total Due</div><div style="font-size:18px;font-weight:900;" id="tCashDue">—</div></div>
+      <div><div class="muted">Total Due</div><div style="font-size:18px;font-weight:900;" id="tDue">—</div></div>
       <div><div class="muted">Total Bank Paid</div><div style="font-size:18px;font-weight:900;" id="tBankPaid">—</div></div>
     </div>
     <div class="muted" id="lastUpdated" style="margin-top:8px;">—</div>
@@ -86,7 +85,6 @@
     <div id="peopleList"></div>
   </div>
 
-  <!-- Payments TAB: Add Wage Payment -->
   <div class="card hidden" id="payCard">
     <div style="font-weight:900;margin-bottom:8px;">Add Payment (WAGE)</div>
 
@@ -111,7 +109,6 @@
     <div class="muted" id="payMsg" style="margin-top:8px;"></div>
   </div>
 
-  <!-- Payments TAB: Advance -->
   <div class="card hidden" id="advCard">
     <div style="font-weight:900;margin-bottom:8px;">Advance</div>
 
@@ -144,7 +141,6 @@
     <div id="advList"></div>
   </div>
 
-  <!-- Settings tab content -->
   <div class="card hidden" id="settingsCard">
     <div style="font-weight:900;margin-bottom:8px;">Settings</div>
 
@@ -186,9 +182,15 @@
         <button id="btnSigClose">Close</button>
       </div>
       <div class="modalBody">
+        <div class="muted">Signer Name</div>
+        <input id="sigSigner" placeholder="Person signing..." />
+
+        <div style="height:10px;"></div>
+
         <div class="sigBox" id="sigBox">
           <canvas id="sigCanvas"></canvas>
         </div>
+
         <div class="muted" style="margin-top:8px;">Please sign above, then press Save.</div>
         <div class="muted" id="sigMsg" style="margin-top:6px;"></div>
       </div>
@@ -200,7 +202,8 @@
   </div>
 
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbyE7Vqczhafvx74GRIkz_8bc2D9ip4SW_QFW-sEK95fo3s7JkOxdR-HDk1F1X4urw8B/exec";
+  // Saruhan: buraya kendi Apps Script /exec URL'ini yaz
+  const API_URL = "PASTE_YOUR_SCRIPT_EXEC_URL_HERE";
 
   const qs = new URLSearchParams(location.search);
   const tokenFromUrl = qs.get('token');
@@ -275,7 +278,7 @@
 
     document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
     document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
-    document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_due);
+    document.getElementById('tDue').textContent = fmtMoney(data.totals.total_due);
     document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
     document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString('en-GB');
 
@@ -311,13 +314,11 @@
       list.appendChild(div);
 
       const o1 = document.createElement('option');
-      o1.value = p.person;
-      o1.textContent = p.person;
+      o1.value = p.person; o1.textContent = p.person;
       selPay.appendChild(o1);
 
       const o2 = document.createElement('option');
-      o2.value = p.person;
-      o2.textContent = p.person;
+      o2.value = p.person; o2.textContent = p.person;
       selAdv.appendChild(o2);
     });
 
@@ -331,12 +332,9 @@
     if (!advBy.value) advBy.value = data.me.name;
 
     const currentPerson = selPay.value;
-    if (currentPerson) {
-      const due = peopleDueMap[currentPerson] || 0;
-      document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
-    } else {
-      document.getElementById('dueLine').textContent = "Due: —";
-    }
+    document.getElementById('dueLine').textContent = currentPerson
+      ? ("Due: " + fmtMoney(peopleDueMap[currentPerson] || 0))
+      : "Due: —";
 
     const role = data.me.role;
     const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
@@ -364,7 +362,7 @@
       div.innerHTML = `
         <div>
           <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}</div>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''} • ${p.signed ? 'SIGNED' : 'UNSIGNED'}</div>
           <div class="muted">${p.note || ''}</div>
         </div>
         <div class="badge">${fmtMoney(p.amount)}</div>
@@ -374,23 +372,37 @@
   }
 
   async function refreshAdvances() {
+    const token = getToken();
+    if (!token) return;
+
+    const data = await jsonp("advances", { token });
+    if (!data.ok) return;
+
     const box = document.getElementById('advList');
     box.innerHTML = '';
+
+    data.advances.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'row';
+      div.innerHTML = `
+        <div>
+          <b>${p.person}</b>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''} • ${p.signed ? 'SIGNED' : 'UNSIGNED'}</div>
+          <div class="muted">${p.note || ''}</div>
+        </div>
+        <div class="badge">${fmtMoney(p.amount)}</div>
+      `;
+      box.appendChild(div);
+    });
   }
 
   document.getElementById('payPerson').onchange = () => {
     const person = document.getElementById('payPerson').value;
-    const due = peopleDueMap[person] || 0;
-    document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
+    document.getElementById('dueLine').textContent = "Due: " + fmtMoney(peopleDueMap[person] || 0);
   };
 
   document.getElementById('tabStatus').onclick = async () => { setView('status'); await refresh(); };
-  document.getElementById('tabPayments').onclick = async () => {
-    setView('payments');
-    await refreshPayments();
-    await refreshAdvances();
-    await refresh();
-  };
+  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refreshAdvances(); await refresh(); };
   document.getElementById('tabSettings').onclick = async () => { setView('settings'); await refresh(); };
 
   document.getElementById('btnSaveToken').onclick = async () => {
@@ -402,17 +414,16 @@
   };
 
   document.getElementById('btnRefresh').onclick = async () => {
-    if (currentView === 'payments') {
-      await refreshPayments();
-      await refreshAdvances();
-    }
+    if (currentView === 'payments') { await refreshPayments(); await refreshAdvances(); }
     await refresh();
   };
 
-  /* ---------- Signature Logic (SVG PATH) ---------- */
+  // ---------- Signature (SVG PATH) ----------
   const sigOverlay = document.getElementById('sigOverlay');
   const sigSub = document.getElementById('sigSub');
   const sigMsg = document.getElementById('sigMsg');
+  const sigSigner = document.getElementById('sigSigner');
+
   const sigCanvas = document.getElementById('sigCanvas');
   const sigBox = document.getElementById('sigBox');
   const ctx2d = sigCanvas.getContext('2d');
@@ -420,12 +431,10 @@
   let isDrawing = false;
   let lastPt = null;
 
-  // ✅ strokes: [ [ [x,y], [x,y]... ], [ ... ] ]
   let strokes = [];
   let currentStroke = null;
 
-  // pending signing
-  let pending = null; // { kind:'PAYMENT'|'ADVANCE', id, person, amount, method }
+  let pending = null; // { kind, id, person, amount, method }
 
   function resizeCanvas() {
     const rect = sigBox.getBoundingClientRect();
@@ -439,12 +448,9 @@
     clearSignature();
   }
 
-  function resetStrokes() {
+  function clearSignature() {
     strokes = [];
     currentStroke = null;
-  }
-
-  function clearSignature() {
     ctx2d.clearRect(0,0,sigCanvas.width, sigCanvas.height);
     ctx2d.save();
     ctx2d.globalAlpha = 0.15;
@@ -454,19 +460,18 @@
     ctx2d.stroke();
     ctx2d.restore();
     sigMsg.textContent = '';
-    resetStrokes();
   }
 
-  function openSignatureModal(info) {
-    if (!info || !info.id) return;
+  function openSignature(info) {
     pending = info;
     sigSub.textContent = `${info.person} • ${fmtMoney(info.amount)} • ${info.method}`;
+    sigSigner.value = info.person || ''; // ✅ default signer = receiver
     sigMsg.textContent = '';
     sigOverlay.classList.remove('hidden');
     resizeCanvas();
   }
 
-  function closeSignatureModal() {
+  function closeSignature() {
     pending = null;
     sigOverlay.classList.add('hidden');
     sigMsg.textContent = '';
@@ -477,19 +482,13 @@
     return { x: (ev.clientX - rect.left), y: (ev.clientY - rect.top) };
   }
 
-  function addPointToStroke(pt) {
-    if (!currentStroke) return;
-    // ✅ küçük olsun diye 1 ondalık
-    currentStroke.push([+(pt.x.toFixed(1)), +(pt.y.toFixed(1))]);
-  }
-
   function startDraw(ev){
     isDrawing = true;
     lastPt = getPointFromEvent(ev);
 
     currentStroke = [];
     strokes.push(currentStroke);
-    addPointToStroke(lastPt);
+    currentStroke.push([+(lastPt.x.toFixed(1)), +(lastPt.y.toFixed(1))]);
   }
 
   function moveDraw(ev){
@@ -501,7 +500,7 @@
     ctx2d.lineTo(pt.x, pt.y);
     ctx2d.stroke();
 
-    addPointToStroke(pt);
+    currentStroke.push([+(pt.x.toFixed(1)), +(pt.y.toFixed(1))]);
     lastPt = pt;
   }
 
@@ -512,33 +511,25 @@
   }
 
   function hasInk() {
-    // stroke bazlı kontrol
     return strokes.some(s => s && s.length >= 2);
   }
 
   function strokesToSvgPath() {
-    // ✅ çok büyürse downsample
     const MAX_POINTS = 800;
-
     let total = 0;
-    strokes.forEach(s => { total += (s ? s.length : 0); });
-
+    strokes.forEach(s => total += (s ? s.length : 0));
     let step = 1;
     if (total > MAX_POINTS) step = Math.ceil(total / MAX_POINTS);
 
     let path = '';
     strokes.forEach(s => {
       if (!s || s.length === 0) return;
-      // downsample
       const pts = (step === 1) ? s : s.filter((_,i)=> i % step === 0);
       if (pts.length === 0) return;
 
       path += `M ${pts[0][0]} ${pts[0][1]} `;
-      for (let i=1; i<pts.length; i++) {
-        path += `L ${pts[i][0]} ${pts[i][1]} `;
-      }
+      for (let i=1;i<pts.length;i++) path += `L ${pts[i][0]} ${pts[i][1]} `;
     });
-
     return path.trim();
   }
 
@@ -548,16 +539,16 @@
   sigCanvas.addEventListener('pointercancel', endDraw);
 
   document.getElementById('btnSigClear').onclick = clearSignature;
-  document.getElementById('btnSigClose').onclick = closeSignatureModal;
+  document.getElementById('btnSigClose').onclick = closeSignature;
 
   document.getElementById('btnSigSave').onclick = async () => {
-    if (!pending) { closeSignatureModal(); return; }
+    if (!pending) { closeSignature(); return; }
     if (!hasInk()) { sigMsg.textContent = 'Please sign before saving.'; return; }
 
     const token = getToken();
-    if (!token) return;
-
     const signature_svg_path = strokesToSvgPath();
+    const signer_name = sigSigner.value.trim(); // ✅ receiver name
+
     sigMsg.textContent = 'Saving...';
 
     const res = await jsonp('sign_tx', {
@@ -567,17 +558,19 @@
       person: pending.person,
       amount: pending.amount,
       method: pending.method,
+      signer_name,
       signature_svg_path
     });
 
     if (!res.ok) { sigMsg.textContent = 'Error: ' + (res.error || ''); return; }
 
-    closeSignatureModal();
+    closeSignature();
     await refreshPayments();
+    await refreshAdvances();
     await refresh();
   };
 
-  /* ---------- Add Payment -> then signature ---------- */
+  // ---------- Add Payment / Advance ----------
   document.getElementById('btnAddPayment').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('payPerson').value;
@@ -596,13 +589,12 @@
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
 
-    openSignatureModal({ kind:'PAYMENT', id: res.id, person, amount: Number(amount || 0), method });
+    openSignature({ kind:'PAYMENT', id: res.id, person, amount: Number(amount || 0), method });
 
     await refreshPayments();
     await refresh();
   };
 
-  /* ---------- Add Advance -> then signature ---------- */
   document.getElementById('btnAddAdvance').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('advPerson').value;
@@ -621,7 +613,7 @@
     document.getElementById('advAmount').value = '';
     document.getElementById('advNote').value = '';
 
-    openSignatureModal({ kind:'ADVANCE', id: res.id, person, amount: Number(amount || 0), method });
+    openSignature({ kind:'ADVANCE', id: res.id, person, amount: Number(amount || 0), method });
 
     await refreshAdvances();
     await refresh();
@@ -644,21 +636,17 @@
     document.getElementById('newUserName').value = '';
   };
 
+  // init token
   const saved = localStorage.getItem("wage_token");
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
-  // ✅ never start with open signature
-  closeSignatureModal();
-
+  // start
   setView('status');
   refresh();
 
   setInterval(() => {
-    if (currentView === 'payments') {
-      refreshPayments();
-      refreshAdvances();
-    }
+    if (currentView === 'payments') { refreshPayments(); refreshAdvances(); }
     refresh();
   }, 15000);
 
