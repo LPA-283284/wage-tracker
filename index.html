@@ -7,51 +7,16 @@
   <style>
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; margin: 12px; }
     .top { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .card { border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0; background:#fff; }
-    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; align-items:center; }
+    .card { border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #eee; }
     .row:last-child { border-bottom:none; }
-    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; white-space:nowrap; }
+    .badge { padding:4px 10px; border-radius:999px; background:#f4f4f4; font-weight:700; }
     button { padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; }
     button.primary { background:#111; color:#fff; border-color:#111; }
     input, select { width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
     .muted { color:#666; font-size:12px; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .hidden { display:none !important; }
-
-    .overlay {
-      position:fixed; inset:0;
-      background: rgba(0,0,0,.45);
-      display:flex; align-items:flex-end; justify-content:center;
-      padding:14px;
-      z-index:9999;
-    }
-    .modal {
-      width:min(720px, 100%);
-      background:#fff;
-      border-radius:16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.35);
-      overflow:hidden;
-    }
-    .modalHeader{
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px 12px 8px 12px;
-      border-bottom:1px solid #eee;
-    }
-    .modalTitle{ font-weight:900; font-size:20px; }
-    .modalBody{ padding:12px; }
-    .sigBox{
-      border:1px solid #ddd; border-radius:12px;
-      height:220px;
-      overflow:hidden;
-      background:#fafafa;
-      touch-action: none;
-    }
-    canvas{ width:100%; height:100%; display:block; }
-    .modalFooter{
-      display:flex; gap:10px; padding:12px;
-      border-top:1px solid #eee;
-    }
-    .btnGrow{ flex:1; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
@@ -74,7 +39,7 @@
     <div class="grid">
       <div><div class="muted">Total WAGE</div><div style="font-size:18px;font-weight:900;" id="tWage">—</div></div>
       <div><div class="muted">Total Cash Paid</div><div style="font-size:18px;font-weight:900;" id="tCashPaid">—</div></div>
-      <div><div class="muted">Total Due</div><div style="font-size:18px;font-weight:900;" id="tDue">—</div></div>
+      <div><div class="muted">Total Cash Due</div><div style="font-size:18px;font-weight:900;" id="tCashDue">—</div></div>
       <div><div class="muted">Total Bank Paid</div><div style="font-size:18px;font-weight:900;" id="tBankPaid">—</div></div>
     </div>
     <div class="muted" id="lastUpdated" style="margin-top:8px;">—</div>
@@ -86,13 +51,14 @@
   </div>
 
   <div class="card hidden" id="payCard">
-    <div style="font-weight:900;margin-bottom:8px;">Add Payment (WAGE)</div>
+    <div style="font-weight:900;margin-bottom:8px;">Add Payment</div>
 
     <div class="grid">
       <div><div class="muted">Person</div><select id="payPerson"></select></div>
       <div><div class="muted">Amount</div><input id="payAmount" inputmode="decimal" placeholder="200" /></div>
     </div>
 
+    <!-- ✅ Due line added -->
     <div class="muted" id="dueLine" style="margin-top:6px;">Due: —</div>
 
     <div style="margin-top:10px;">
@@ -105,51 +71,27 @@
 
     <div style="margin-top:10px;"><div class="muted">Paid By</div><input id="payBy" placeholder="Saruhan / Friend" /></div>
     <div style="margin-top:10px;"><div class="muted">Note</div><input id="payNote" placeholder="Payment note" /></div>
-    <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Add Payment + Signature</button></div>
+    <div style="margin-top:12px;"><button id="btnAddPayment" class="primary">Add Payment</button></div>
     <div class="muted" id="payMsg" style="margin-top:8px;"></div>
   </div>
 
-  <div class="card hidden" id="advCard">
-    <div style="font-weight:900;margin-bottom:8px;">Advance</div>
-
-    <div class="grid">
-      <div><div class="muted">Person</div><select id="advPerson"></select></div>
-      <div><div class="muted">Amount</div><input id="advAmount" inputmode="decimal" placeholder="100" /></div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <div class="muted">Method</div>
-      <select id="advMethod">
-        <option value="CASH">Cash</option>
-        <option value="BANK">Bank Transfer</option>
-      </select>
-    </div>
-
-    <div style="margin-top:10px;"><div class="muted">Given By</div><input id="advBy" placeholder="Saruhan / Friend" /></div>
-    <div style="margin-top:10px;"><div class="muted">Note</div><input id="advNote" placeholder="Advance note" /></div>
-    <div style="margin-top:12px;"><button id="btnAddAdvance" class="primary">Add Advance + Signature</button></div>
-    <div class="muted" id="advMsg" style="margin-top:8px;"></div>
-  </div>
-
   <div class="card hidden" id="paymentsCard">
-    <div style="font-weight:900;margin-bottom:8px;">Payments History (WAGE)</div>
+    <div style="font-weight:900;margin-bottom:8px;">Payments History</div>
     <div id="paymentsList"></div>
   </div>
 
-  <div class="card hidden" id="advHistoryCard">
-    <div style="font-weight:900;margin-bottom:8px;">Advance History</div>
-    <div id="advList"></div>
-  </div>
-
+  <!-- ✅ Settings tab content -->
   <div class="card hidden" id="settingsCard">
     <div style="font-weight:900;margin-bottom:8px;">Settings</div>
 
+    <!-- Token (moved here) -->
     <div class="muted">Token</div>
     <input id="tokenInput" placeholder="token..." />
     <div class="muted" style="margin-top:6px;">You can also share by link: <b>?token=...</b></div>
     <div style="margin-top:10px;"><button id="btnSaveToken" class="primary">Save Token</button></div>
     <div class="muted" id="tokenMsg" style="margin-top:8px;"></div>
 
+    <!-- Add User (moved here) -->
     <div class="hidden" id="adminCard" style="margin-top:18px;">
       <hr style="border:none;border-top:1px solid #eee;margin:16px 0;"/>
       <div style="font-weight:900;margin-bottom:8px;">Admin</div>
@@ -171,38 +113,7 @@
     </div>
   </div>
 
-  <!-- Signature Modal -->
-  <div id="sigOverlay" class="overlay hidden">
-    <div class="modal">
-      <div class="modalHeader">
-        <div>
-          <div class="modalTitle">Signature</div>
-          <div class="muted" id="sigSub">—</div>
-        </div>
-        <button id="btnSigClose">Close</button>
-      </div>
-      <div class="modalBody">
-        <div class="muted">Signer Name</div>
-        <input id="sigSigner" placeholder="Person signing..." />
-
-        <div style="height:10px;"></div>
-
-        <div class="sigBox" id="sigBox">
-          <canvas id="sigCanvas"></canvas>
-        </div>
-
-        <div class="muted" style="margin-top:8px;">Please sign above, then press Save.</div>
-        <div class="muted" id="sigMsg" style="margin-top:6px;"></div>
-      </div>
-      <div class="modalFooter">
-        <button id="btnSigClear">Clear</button>
-        <button id="btnSigSave" class="primary btnGrow">Save Signature</button>
-      </div>
-    </div>
-  </div>
-
 <script>
-  // Saruhan: buraya kendi Apps Script /exec URL'ini yaz
   const API_URL = "https://script.google.com/macros/s/AKfycbyE7Vqczhafvx74GRIkz_8bc2D9ip4SW_QFW-sEK95fo3s7JkOxdR-HDk1F1X4urw8B/exec";
 
   const qs = new URLSearchParams(location.search);
@@ -240,27 +151,29 @@
 
   function getToken() { return tokenInput.value.trim(); }
 
-  let currentView = 'status';
-  let peopleDueMap = {};
+  let currentView = 'status'; // 'status' | 'payments' | 'settings'
+  let peopleDueMap = {};       // ✅ person -> cash_due
   let lastRole = '';
 
   function setView(view) {
     currentView = view;
 
+    // Status tab
     document.getElementById('summaryCard').classList.toggle('hidden', view !== 'status');
     document.getElementById('peopleCard').classList.toggle('hidden', view !== 'status');
 
+    // Payments tab
     document.getElementById('paymentsCard').classList.toggle('hidden', view !== 'payments');
     document.getElementById('payCard').classList.toggle('hidden', view !== 'payments');
-    document.getElementById('advCard').classList.toggle('hidden', view !== 'payments');
-    document.getElementById('advHistoryCard').classList.toggle('hidden', view !== 'payments');
 
+    // Settings tab
     document.getElementById('settingsCard').classList.toggle('hidden', view !== 'settings');
 
     document.getElementById('tabStatus').classList.toggle('primary', view === 'status');
     document.getElementById('tabPayments').classList.toggle('primary', view === 'payments');
     document.getElementById('tabSettings').classList.toggle('primary', view === 'settings');
 
+    // Admin only shown inside Settings
     const isAdmin = (lastRole === 'ADMIN');
     document.getElementById('adminCard').classList.toggle('hidden', !(view === 'settings' && isAdmin));
   }
@@ -273,75 +186,71 @@
     if (!data.ok) { tokenMsg.textContent = "Error: " + (data.error || ""); return; }
 
     tokenMsg.textContent = "";
+
     lastRole = data.me.role || '';
     document.getElementById('meLine').textContent = `${data.me.name} • ${data.me.role}`;
 
     document.getElementById('tWage').textContent = fmtMoney(data.totals.total_wage);
     document.getElementById('tCashPaid').textContent = fmtMoney(data.totals.total_cash_paid);
-    document.getElementById('tDue').textContent = fmtMoney(data.totals.total_due);
+    document.getElementById('tCashDue').textContent = fmtMoney(data.totals.total_cash_due);
     document.getElementById('tBankPaid').textContent = fmtMoney(data.totals.total_bank_paid);
     document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleString('en-GB');
 
     const list = document.getElementById('peopleList');
     list.innerHTML = '';
 
-    const selPay = document.getElementById('payPerson');
-    const prevPay = selPay.value;
-    selPay.innerHTML = '';
-
-    const selAdv = document.getElementById('advPerson');
-    const prevAdv = selAdv.value;
-    selAdv.innerHTML = '';
+    const sel = document.getElementById('payPerson');
+    const previouslySelected = sel.value;
+    sel.innerHTML = '';
 
     const peopleSorted = [...data.people].sort((a, b) => {
-      const aDue = Number(a.due || 0);
-      const bDue = Number(b.due || 0);
+      const aDue = Number(a.cash_due || 0);
+      const bDue = Number(b.cash_due || 0);
       const aZero = Math.abs(aDue) < 0.005;
       const bZero = Math.abs(bDue) < 0.005;
       if (aZero !== bZero) return aZero ? 1 : -1;
       return bDue - aDue;
     });
 
+    // ✅ build due map
     peopleDueMap = {};
-    peopleSorted.forEach(p => { peopleDueMap[p.person] = p.due; });
+    peopleSorted.forEach(p => { peopleDueMap[p.person] = p.cash_due; });
 
     peopleSorted.forEach(p => {
       const div = document.createElement('div');
       div.className = 'row';
       div.innerHTML =
-        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash: ${fmtMoney(p.cash_paid_total)} • Bank: ${fmtMoney(p.bank_paid_total)}</div></div>
-         <div class="badge">${fmtMoney(p.due)}</div>`;
+        `<div><b>${p.person}</b><div class="muted">WAGE: ${fmtMoney(p.wage_total)} • Cash : ${fmtMoney(p.cash_paid_total)} • Bank : ${fmtMoney(p.bank_paid_total)}</div></div>
+         <div class="badge">${fmtMoney(p.cash_due)}</div>`;
       list.appendChild(div);
 
-      const o1 = document.createElement('option');
-      o1.value = p.person; o1.textContent = p.person;
-      selPay.appendChild(o1);
-
-      const o2 = document.createElement('option');
-      o2.value = p.person; o2.textContent = p.person;
-      selAdv.appendChild(o2);
+      const opt = document.createElement('option');
+      opt.value = p.person;
+      opt.textContent = p.person;
+      sel.appendChild(opt);
     });
 
-    if (Array.from(selPay.options).some(o => o.value === prevPay)) selPay.value = prevPay;
-    if (Array.from(selAdv.options).some(o => o.value === prevAdv)) selAdv.value = prevAdv;
+    const stillExists = Array.from(sel.options).some(o => o.value === previouslySelected);
+    if (stillExists) sel.value = previouslySelected;
 
     const payBy = document.getElementById('payBy');
     if (!payBy.value) payBy.value = data.me.name;
 
-    const advBy = document.getElementById('advBy');
-    if (!advBy.value) advBy.value = data.me.name;
+    // Due line refresh
+    const currentPerson = sel.value;
+    if (currentPerson) {
+      const due = peopleDueMap[currentPerson] || 0;
+      document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
+    } else {
+      document.getElementById('dueLine').textContent = "Due: —";
+    }
 
-    const currentPerson = selPay.value;
-    document.getElementById('dueLine').textContent = currentPerson
-      ? ("Due: " + fmtMoney(peopleDueMap[currentPerson] || 0))
-      : "Due: —";
-
+    // Payment permissions: pay form visible only in Payments tab and only if allowed
     const role = data.me.role;
     const canPay = (role === 'ADMIN' || role === 'PAYER' || role === 'EDITOR');
-
     document.getElementById('payCard').classList.toggle('hidden', !(currentView === 'payments' && canPay));
-    document.getElementById('advCard').classList.toggle('hidden', !(currentView === 'payments' && canPay));
 
+    // Admin card only in Settings and only ADMIN
     const isAdmin = (role === 'ADMIN');
     document.getElementById('adminCard').classList.toggle('hidden', !(currentView === 'settings' && isAdmin));
   }
@@ -362,7 +271,7 @@
       div.innerHTML = `
         <div>
           <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''} • ${p.signed ? 'SIGNED' : 'UNSIGNED'}</div>
+          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''}</div>
           <div class="muted">${p.note || ''}</div>
         </div>
         <div class="badge">${fmtMoney(p.amount)}</div>
@@ -371,38 +280,15 @@
     });
   }
 
-  async function refreshAdvances() {
-    const token = getToken();
-    if (!token) return;
-
-    const data = await jsonp("advances", { token });
-    if (!data.ok) return;
-
-    const box = document.getElementById('advList');
-    box.innerHTML = '';
-
-    data.advances.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'row';
-      div.innerHTML = `
-        <div>
-          <b>${p.person}</b>
-          <div class="muted">${p.paid_by || ''} • ${p.date || ''} • ${p.method || ''} • ${p.signed ? 'SIGNED' : 'UNSIGNED'}</div>
-          <div class="muted">${p.note || ''}</div>
-        </div>
-        <div class="badge">${fmtMoney(p.amount)}</div>
-      `;
-      box.appendChild(div);
-    });
-  }
-
+  // ✅ Person change -> update due line
   document.getElementById('payPerson').onchange = () => {
     const person = document.getElementById('payPerson').value;
-    document.getElementById('dueLine').textContent = "Due: " + fmtMoney(peopleDueMap[person] || 0);
+    const due = peopleDueMap[person] || 0;
+    document.getElementById('dueLine').textContent = "Due: " + fmtMoney(due);
   };
 
   document.getElementById('tabStatus').onclick = async () => { setView('status'); await refresh(); };
-  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refreshAdvances(); await refresh(); };
+  document.getElementById('tabPayments').onclick = async () => { setView('payments'); await refreshPayments(); await refresh(); };
   document.getElementById('tabSettings').onclick = async () => { setView('settings'); await refresh(); };
 
   document.getElementById('btnSaveToken').onclick = async () => {
@@ -414,208 +300,30 @@
   };
 
   document.getElementById('btnRefresh').onclick = async () => {
-    if (currentView === 'payments') { await refreshPayments(); await refreshAdvances(); }
+    if (currentView === 'payments') await refreshPayments();
     await refresh();
   };
 
-  // ---------- Signature (SVG PATH) ----------
-  const sigOverlay = document.getElementById('sigOverlay');
-  const sigSub = document.getElementById('sigSub');
-  const sigMsg = document.getElementById('sigMsg');
-  const sigSigner = document.getElementById('sigSigner');
-
-  const sigCanvas = document.getElementById('sigCanvas');
-  const sigBox = document.getElementById('sigBox');
-  const ctx2d = sigCanvas.getContext('2d');
-
-  let isDrawing = false;
-  let lastPt = null;
-
-  let strokes = [];
-  let currentStroke = null;
-
-  let pending = null; // { kind, id, person, amount, method }
-
-  function resizeCanvas() {
-    const rect = sigBox.getBoundingClientRect();
-    const ratio = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-    sigCanvas.width = Math.floor(rect.width * ratio);
-    sigCanvas.height = Math.floor(rect.height * ratio);
-    ctx2d.setTransform(ratio,0,0,ratio,0,0);
-    ctx2d.lineWidth = 2.2;
-    ctx2d.lineCap = 'round';
-    ctx2d.strokeStyle = '#111';
-    clearSignature();
-  }
-
-  function clearSignature() {
-    strokes = [];
-    currentStroke = null;
-    ctx2d.clearRect(0,0,sigCanvas.width, sigCanvas.height);
-    ctx2d.save();
-    ctx2d.globalAlpha = 0.15;
-    ctx2d.beginPath();
-    ctx2d.moveTo(20, sigBox.clientHeight - 50);
-    ctx2d.lineTo(sigBox.clientWidth - 20, sigBox.clientHeight - 50);
-    ctx2d.stroke();
-    ctx2d.restore();
-    sigMsg.textContent = '';
-  }
-
-  function openSignature(info) {
-    pending = info;
-    sigSub.textContent = `${info.person} • ${fmtMoney(info.amount)} • ${info.method}`;
-    sigSigner.value = info.person || ''; // ✅ default signer = receiver
-    sigMsg.textContent = '';
-    sigOverlay.classList.remove('hidden');
-    resizeCanvas();
-  }
-
-  function closeSignature() {
-    pending = null;
-    sigOverlay.classList.add('hidden');
-    sigMsg.textContent = '';
-  }
-
-  function getPointFromEvent(ev) {
-    const rect = sigCanvas.getBoundingClientRect();
-    return { x: (ev.clientX - rect.left), y: (ev.clientY - rect.top) };
-  }
-
-  function startDraw(ev){
-    isDrawing = true;
-    lastPt = getPointFromEvent(ev);
-
-    currentStroke = [];
-    strokes.push(currentStroke);
-    currentStroke.push([+(lastPt.x.toFixed(1)), +(lastPt.y.toFixed(1))]);
-  }
-
-  function moveDraw(ev){
-    if (!isDrawing) return;
-    const pt = getPointFromEvent(ev);
-
-    ctx2d.beginPath();
-    ctx2d.moveTo(lastPt.x, lastPt.y);
-    ctx2d.lineTo(pt.x, pt.y);
-    ctx2d.stroke();
-
-    currentStroke.push([+(pt.x.toFixed(1)), +(pt.y.toFixed(1))]);
-    lastPt = pt;
-  }
-
-  function endDraw(){
-    isDrawing = false;
-    lastPt = null;
-    currentStroke = null;
-  }
-
-  function hasInk() {
-    return strokes.some(s => s && s.length >= 2);
-  }
-
-  function strokesToSvgPath() {
-    const MAX_POINTS = 800;
-    let total = 0;
-    strokes.forEach(s => total += (s ? s.length : 0));
-    let step = 1;
-    if (total > MAX_POINTS) step = Math.ceil(total / MAX_POINTS);
-
-    let path = '';
-    strokes.forEach(s => {
-      if (!s || s.length === 0) return;
-      const pts = (step === 1) ? s : s.filter((_,i)=> i % step === 0);
-      if (pts.length === 0) return;
-
-      path += `M ${pts[0][0]} ${pts[0][1]} `;
-      for (let i=1;i<pts.length;i++) path += `L ${pts[i][0]} ${pts[i][1]} `;
-    });
-    return path.trim();
-  }
-
-  sigCanvas.addEventListener('pointerdown', (e)=>{ sigCanvas.setPointerCapture(e.pointerId); startDraw(e); });
-  sigCanvas.addEventListener('pointermove', moveDraw);
-  sigCanvas.addEventListener('pointerup', endDraw);
-  sigCanvas.addEventListener('pointercancel', endDraw);
-
-  document.getElementById('btnSigClear').onclick = clearSignature;
-  document.getElementById('btnSigClose').onclick = closeSignature;
-
-  document.getElementById('btnSigSave').onclick = async () => {
-    if (!pending) { closeSignature(); return; }
-    if (!hasInk()) { sigMsg.textContent = 'Please sign before saving.'; return; }
-
-    const token = getToken();
-    const signature_svg_path = strokesToSvgPath();
-    const signer_name = sigSigner.value.trim(); // ✅ receiver name
-
-    sigMsg.textContent = 'Saving...';
-
-    const res = await jsonp('sign_tx', {
-      token,
-      id: pending.id,
-      kind: pending.kind,
-      person: pending.person,
-      amount: pending.amount,
-      method: pending.method,
-      signer_name,
-      signature_svg_path
-    });
-
-    if (!res.ok) { sigMsg.textContent = 'Error: ' + (res.error || ''); return; }
-
-    closeSignature();
-    await refreshPayments();
-    await refreshAdvances();
-    await refresh();
-  };
-
-  // ---------- Add Payment / Advance ----------
   document.getElementById('btnAddPayment').onclick = async () => {
     const token = getToken();
     const person = document.getElementById('payPerson').value;
     const amount = document.getElementById('payAmount').value;
+
     const paid_by = document.getElementById('payBy').value.trim();
     const note = document.getElementById('payNote').value.trim();
     const method = document.getElementById('payMethod').value;
 
     const msg = document.getElementById('payMsg');
-    msg.textContent = "Saving payment...";
+    msg.textContent = "Sending...";
 
     const res = await jsonp("add_payment", { token, person, amount, paid_by, note, method });
     if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
 
-    msg.textContent = "Saved. Please sign...";
+    msg.textContent = "Added ✅";
     document.getElementById('payAmount').value = '';
     document.getElementById('payNote').value = '';
 
-    openSignature({ kind:'PAYMENT', id: res.id, person, amount: Number(amount || 0), method });
-
     await refreshPayments();
-    await refresh();
-  };
-
-  document.getElementById('btnAddAdvance').onclick = async () => {
-    const token = getToken();
-    const person = document.getElementById('advPerson').value;
-    const amount = document.getElementById('advAmount').value;
-    const given_by = document.getElementById('advBy').value.trim();
-    const note = document.getElementById('advNote').value.trim();
-    const method = document.getElementById('advMethod').value;
-
-    const msg = document.getElementById('advMsg');
-    msg.textContent = "Saving advance...";
-
-    const res = await jsonp("add_advance", { token, person, amount, given_by, note, method });
-    if (!res.ok) { msg.textContent = "Error: " + (res.error || ""); return; }
-
-    msg.textContent = "Saved. Please sign...";
-    document.getElementById('advAmount').value = '';
-    document.getElementById('advNote').value = '';
-
-    openSignature({ kind:'ADVANCE', id: res.id, person, amount: Number(amount || 0), method });
-
-    await refreshAdvances();
     await refresh();
   };
 
@@ -636,23 +344,17 @@
     document.getElementById('newUserName').value = '';
   };
 
-  // init token
   const saved = localStorage.getItem("wage_token");
   if (tokenFromUrl) tokenInput.value = tokenFromUrl;
   else if (saved) tokenInput.value = saved;
 
-  // start
   setView('status');
   refresh();
 
   setInterval(() => {
-    if (currentView === 'payments') { refreshPayments(); refreshAdvances(); }
+    if (currentView === 'payments') refreshPayments();
     refresh();
   }, 15000);
-
-  window.addEventListener('resize', () => {
-    if (!sigOverlay.classList.contains('hidden')) resizeCanvas();
-  });
 </script>
 </body>
 </html>
